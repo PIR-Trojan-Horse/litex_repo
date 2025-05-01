@@ -32,7 +32,7 @@ def tb(dut):
         yield
         print(f"counter: {(yield dut.counter)} blinker: {(yield dut.blinker)}")
     
-    raise StopSimulation()
+    # raise StopSimulation()
 
 if __name__ == "__main__":
     dut = SimSoC()
