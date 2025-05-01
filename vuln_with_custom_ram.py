@@ -8,6 +8,8 @@ from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.wishbone import Arbiter, SRAM
 from litex_boards.platforms import digilent_basys3
 
+import os
+
 # ----------- AES Module (écrit dans RAM) -----------
 class AESFromRAM(Module):
     def __init__(self, bus):
@@ -162,7 +164,11 @@ def tb(dut):
 def main():
     platform = digilent_basys3.Platform()
     soc = DualMasterSoC(platform, simulate=True)
-    run_simulation(soc, tb(soc), vcd_name="dual_master.vcd")
+
+
+    if not os.path.exists("build/"):
+        os.makedirs("build/")
+    run_simulation(soc, tb(soc), vcd_name="build/dual_master.vcd")
 
 if __name__ == "__main__":
     main()

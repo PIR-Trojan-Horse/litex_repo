@@ -6,6 +6,7 @@ from litex.soc.integration.soc_core import SoCCore, SoCRegion
 from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.csr import AutoCSR
 
+import os
 
 # ---------- Blinker Module ----------
 class Blinker(Module):
@@ -203,7 +204,10 @@ def tb(dut):
 def main():
     platform = digilent_basys3.Platform()
     soc = BlinkerSoC(platform, simulate=True)
-    run_simulation(soc, tb(soc), vcd_name="simulation.vcd")
+
+    if not os.path.exists("build/"):
+        os.makedirs("build/")
+    run_simulation(soc, tb(soc), vcd_name="build/simulation.vcd")
 
 if __name__ == "__main__":
     main()

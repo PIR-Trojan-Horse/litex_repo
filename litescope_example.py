@@ -1,6 +1,8 @@
 from migen import *
 from migen.sim import run_simulation
 
+import os
+
 # Définir StopSimulation soi-même (Migen ne l'exporte pas)
 class StopSimulation(Exception):
     pass
@@ -34,5 +36,8 @@ def tb(dut):
 
 if __name__ == "__main__":
     dut = SimSoC()
-    run_simulation(dut, tb(dut), vcd_name="sim.vcd")
+
+    if not os.path.exists("build/"):
+        os.makedirs("build/")
+    run_simulation(dut, tb(dut), vcd_name="build/sim.vcd")
     print("✅ Simulation terminée.")

@@ -10,6 +10,9 @@ from litex_boards.platforms import digilent_basys3
 from migen import *
 from migen.genlib.fsm import FSM, NextState, NextValue
 
+import os
+from time import time
+
 RED = "\033[91m"
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
@@ -312,7 +315,10 @@ def tb(dut):
 def main():
     platform = digilent_basys3.Platform()
     soc = DualMasterSoC(platform, simulate=True)
-    run_simulation(soc, tb(soc), vcd_name="dual_master.vcd")
+
+    if not os.path.exists("build/"):
+        os.makedirs("build/")
+    run_simulation(soc, tb(soc), vcd_name="build/dual_master.vcd")
 
 if __name__ == "__main__":
     main()
