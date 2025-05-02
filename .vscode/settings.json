@@ -1,0 +1,4 @@
+{
+    //"python.defaultInterpreterPath": "/home/user/INSA/S8/pir/py/bin/python"
+    // "python.analysis.extraPaths": ["${workspace}../litexInstall"]
+}
