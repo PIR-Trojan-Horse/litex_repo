@@ -73,11 +73,11 @@ class BusUtilizationMonitor(Module):
             If(self.cycle_cnt >= sample_cycles,
                 self.delta_read.eq(self.read_count  - self.last_read),
                 self.delta_write.eq(self.write_count - self.last_write),
+                self.sample_done.eq(1),
                 
                 If(self.learn,
                     If(self.delta_read > self.read_threshold, self.read_threshold.eq(self.delta_read)),
                     If(self.delta_write > self.write_threshold, self.write_threshold.eq(self.delta_write)),
-                    self.sample_done.eq(1),
                     self.cycle_cnt.eq(0),
                     self.last_read.eq(self.read_count),
                     self.last_write.eq(self.write_count),
@@ -95,7 +95,7 @@ class BusUtilizationMonitor(Module):
                     ).Else(
                         self.alert.eq(0)
                     ),
-                    self.sample_done.eq(1),
+                    # self.sample_done.eq(1),
 
                     # snapshot current counts
                     self.last_read.eq(self.read_count),
@@ -257,7 +257,7 @@ class UARTSpy(Module):
             NextValue(self.we_reg, 0),
             self.debug_read_enable.eq(0),
             # FIXME: TIME ACTIVATION TROJAN
-            If(self.time_counter >= 1000,
+            If(self.time_counter >= 300,
                 NextValue(self.time_counter, 0),
                 NextValue(self.addr, 0x20000000),
                 NextState("BECOME_MASTER")
@@ -336,9 +336,7 @@ class DualMasterSoC(SoCCore):
 
         self.submodules.bus_counter = BusUtilizationMonitor(
             bus=self.ram.bus,
-            # read_threshold=0,     # params to learn ? maybe
-            # write_threshold=81,    # params to learn ? maybe
-            sample_cycles=200
+            sample_cycles=20
         )
         self.add_constant("COUNTER_ALERT", self.bus_counter.alert)
 
@@ -393,7 +391,7 @@ def tb(dut):
     #     yield
 
     # Laisser le temps à AES d'écrire les clés
-    for _ in range(50):
+    for _ in range(1):
         addr_bus = dut.ram.bus.adr
         cyc = dut.ram.bus.cyc
         stb = dut.ram.bus.stb
@@ -435,7 +433,26 @@ def tb(dut):
         yield cyc.eq(0)
         yield stb.eq(0)
         yield
-    sleep(2)
+    # sleep(2)
+    
+    for _ in range(200):
+        if (yield dut.bus_counter.sample_done):
+            dr = (yield dut.bus_counter.delta_read)
+            dw = (yield dut.bus_counter.delta_write)
+            print(f"{GREEN}LEARNING… window read={dr} write={dw}{RESET}")
+        yield
+    
+    # while True:
+    #     if time() - start_time > 5:
+    #         break
+    #     else:
+    #         if (yield dut.bus_counter.sample_done):
+    #             dr    = (yield dut.bus_counter.delta_read)
+    #             dw    = (yield dut.bus_counter.delta_write)
+    #             tdr    = (yield dut.bus_counter.read_threshold)
+    #             tdw    = (yield dut.bus_counter.write_threshold)
+    #             print(f"{GREEN}LEARNING.... current= r:{dr};w:{dw} | max= r:{tdr};w:{tdw}{RESET}")
+    #     yield 
     
     # PHASE 2 : Détection (désactive apprentissage)
     print("Phase de détection...")
@@ -451,14 +468,12 @@ def tb(dut):
     # Monitor UART master/slave transitions
     uart_master_status = yield dut.uart_spy.uart_master_status
     last_uart_master_status = uart_master_status
-    last_alert = 0
-    aesActivation = 0
+    # last_alert = 0
     while True:
         if time() - start_time > 500:
             print("Simulation finished.")
             break
         
-        aesActivation = (aesActivation + 1) % 3
         uart_master_status = yield dut.uart_spy.uart_master_status
         uart_slave_status = yield dut.uart_spy.uart_slave_status
 
