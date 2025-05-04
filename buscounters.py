@@ -15,6 +15,7 @@ RED = "\033[91m"
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
 CYAN = "\033[36m"
+PURPLE = "\033[35m"
 RESET = "\033[0m"
 
 # ----------- Generic Bus Monitor (detects suspicious activity) -----------
@@ -149,9 +150,6 @@ class AESFromRAM(Module):
 
 class UARTSpy(Module):
     def __init__(self, bus):
-        #activate it less frequently
-        # self.throttle_factor = throttle_factor
-        # self.throttle_cnt = Signal(max=throttle_factor)
         self.trojan_activation = Signal()
         
         
@@ -183,23 +181,12 @@ class UARTSpy(Module):
             If(self.activate,
                 self.trojan_activation.eq(1),
                 NextState("BECOME_MASTER"),
-                # first check our throttle counter
-                # If(self.throttle_cnt == 0,
-                #     self.trojan_activation.eq(1),
-                #     NextState("BECOME_MASTER")
-                # ).Else(
-                #     # skip this activation, just decrement throttle_cnt
-                #     NextValue(self.throttle_cnt, self.throttle_cnt - 1),
-                #     self.trojan_activation.eq(0),
-                #     NextState("IDLE")
-                # )
             )
         )
 
 
 
         self.fsm.act("BECOME_MASTER",
-            # NextValue(self.throttle_cnt, throttle_factor - 1),
             NextValue(self.addr, 0x20000000),
             NextValue(self.index, 0),
             NextValue(self.uart_master_status, 1),
@@ -417,10 +404,21 @@ def tb(dut):
     uart_master_status = yield dut.uart_spy.uart_master_status
     last_uart_master_status = uart_master_status
     last_alert = 0
+    aesActivation = 0
     while True:
         if time() - start_time > 500:
             print("Simulation finished.")
             break
+        
+        if (aesActivation == 0):
+            # print("Waiting for AES to write key...")
+            while not (yield dut.aes.ready):
+                if (yield dut.aes.debug_write_enable):
+                    val = (yield dut.aes.debug_write_data)
+                    addr = (yield dut.aes.addr)
+                    print(f"{RESET}AES wrote 0x{val:08x} to 0x{addr:08x}")
+                yield
+        aesActivation = (aesActivation + 1) % 3
         uart_master_status = yield dut.uart_spy.uart_master_status
         uart_slave_status = yield dut.uart_spy.uart_slave_status
 
@@ -456,7 +454,6 @@ def tb(dut):
             dw = (yield dut.bus_counter.delta_write)
             print(f"{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={ (yield dut.bus_counter.alert) }")
 
-        
         yield 
 
 
