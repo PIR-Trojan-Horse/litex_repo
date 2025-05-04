@@ -12,6 +12,7 @@ from time import time
 import os
 
 RED = "\033[91m"
+RED_BG = "\033[101m"
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
 CYAN = "\033[36m"
@@ -26,6 +27,7 @@ class BusUtilizationMonitor(Module):
                  sample_cycles=100_000):
         # Alert goes high if either reads or writes exceed their thresholds
         self.alert       = Signal()
+        self.alert_pulse = Signal()
         self.sample_done = Signal()
 
         # counters & sample timer
@@ -66,15 +68,17 @@ class BusUtilizationMonitor(Module):
                 self.delta_read.eq(self.read_count  - self.last_read),
                 self.delta_write.eq(self.write_count - self.last_write),
                 # then tell tb() that sampling is done
-                self.sample_done.eq(1),
                 # if more read or write + threshold than last time -> go in alert
                 If(self.delta_read > read_threshold,
+                    self.alert_pulse.eq(1),
                     self.alert.eq(1)
                 ).Elif(self.delta_write > write_threshold,
+                    self.alert_pulse.eq(1),
                     self.alert.eq(1)
                 ).Else(
                     self.alert.eq(0)
                 ),
+                self.sample_done.eq(1),
 
                 # snapshot current counts
                 self.last_read.eq(self.read_count),
@@ -84,6 +88,7 @@ class BusUtilizationMonitor(Module):
                 self.cycle_cnt.eq(0),
             ).Else(
                 # reset all flags
+                self.alert_pulse.eq(0),
                 self.sample_done.eq(0),
                 self.alert.eq(0)
             )
@@ -313,8 +318,8 @@ class DualMasterSoC(SoCCore):
 
         self.submodules.bus_counter = BusUtilizationMonitor(
             bus=self.ram.bus,
-            read_threshold=20,     # params to learn ? maybe
-            write_threshold=20,    # params to learn ? maybe
+            read_threshold=0,     # params to learn ? maybe
+            write_threshold=81,    # params to learn ? maybe
             sample_cycles=200
         )
         self.add_constant("COUNTER_ALERT", self.bus_counter.alert)
@@ -445,17 +450,21 @@ def tb(dut):
         # current_alert = yield dut.bus_learning.alert
         # if current_alert and not last_alert:
             # print(f"{RED}⚠️  ALERT: Suspicious activity detected! Possible trojan active!")
-        if (yield dut.bus_counter.alert):
-            print(f"{RED}⚠️ ALERT: Suspicious activity detected! Possible trojan active! ⚠️ Bus-Utilization Spike!")
+        # if (yield dut.bus_counter.alert):
+        #     print(f"{RED}⚠️ ALERT: Suspicious activity detected! Possible trojan active! ⚠️ Bus-Utilization Spike!")
         # last_alert = current_alert
         if (yield dut.uart_spy.trojan_activation):
             print(f"{PURPLE}Trojan is reading...")
             
         if (yield dut.bus_counter.sample_done):
-            # compute deltas in TB (you could also expose them as signals)
-            dr = (yield dut.bus_counter.delta_read)
-            dw = (yield dut.bus_counter.delta_write)
-            print(f"{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={ (yield dut.bus_counter.alert) }")
+            dr    = (yield dut.bus_counter.delta_read)
+            dw    = (yield dut.bus_counter.delta_write)
+            alert = (yield dut.bus_counter.delta_read)
+            if alert:
+                print(f"{RED}⚠️ ALERT: Suspicious activity detected! Possible Trojan active! ⚠️ Bus-Utilization Spike!")
+                print(f"{RED_BG}{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={alert}{RESET}")
+            else:
+                print(f"{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={alert}")
 
         yield 
 
