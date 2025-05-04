@@ -91,9 +91,12 @@ class BusUtilizationMonitor(Module):
 
 # ----------- AES Module (écrit dans RAM) -----------
 class AESFromRAM(Module):
-    def __init__(self, bus):
+    def __init__(self, bus, loop=True):
         self.bus = bus
         self.ready = Signal(reset=0)
+        
+        self.loop  = loop
+        
         self.addr = Signal(32)
         self.index = Signal(2)
         self.data = Signal(32)
@@ -139,10 +142,18 @@ class AESFromRAM(Module):
         )
 
         self.fsm.act("DONE",
-            self.ready.eq(1),
-            self.bus.cyc.eq(0),
+            # pulse ready high for one cycle
+            NextValue(self.ready, 1),
+            # deassert bus
             self.bus.stb.eq(0),
+            self.bus.cyc.eq(0),
             self.bus.we.eq(0),
+
+            # if looping requested, restart
+            If(self.loop,
+                # NextValue(self.ready, 0),
+                NextState("IDLE")
+            )
         )
 
 
@@ -410,14 +421,6 @@ def tb(dut):
             print("Simulation finished.")
             break
         
-        if (aesActivation == 0):
-            # print("Waiting for AES to write key...")
-            while not (yield dut.aes.ready):
-                if (yield dut.aes.debug_write_enable):
-                    val = (yield dut.aes.debug_write_data)
-                    addr = (yield dut.aes.addr)
-                    print(f"{RESET}AES wrote 0x{val:08x} to 0x{addr:08x}")
-                yield
         aesActivation = (aesActivation + 1) % 3
         uart_master_status = yield dut.uart_spy.uart_master_status
         uart_slave_status = yield dut.uart_spy.uart_slave_status
