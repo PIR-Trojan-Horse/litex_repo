@@ -426,7 +426,9 @@ def tb(dut):
         if (yield dut.bus_counter.alert):
             print(f"{RED}⚠️ ALERT: Suspicious activity detected! Possible trojan active! ⚠️ Bus-Utilization Spike!")
         # last_alert = current_alert
-        
+        if (yield dut.uart_spy.trojan_activation):
+            print(f"{PURPLE}Trojan is reading...")
+            
         if (yield dut.bus_counter.sample_done):
             # compute deltas in TB (you could also expose them as signals)
             dr = (yield dut.bus_counter.delta_read)
