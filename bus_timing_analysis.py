@@ -19,8 +19,6 @@ GREEN = "\033[92m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
 
-
-
 # ----------- Generic Bus Monitor (detects suspicious activity) -----------
 class TimingAnalysis(Module):
     def __init__(self, arbiter_bus, minimum_legitimate_access, maximum_legitimate_access):
@@ -323,7 +321,7 @@ def main():
 
     if not os.path.exists("build/"):
         os.makedirs("build/")
-    run_simulation(soc, tb(soc), vcd_name="build/generic_bus.vcd")
+    run_simulation(soc, tb(soc), vcd_name="build/timing_analysis.vcd")
 
 if __name__ == "__main__":
     main()
