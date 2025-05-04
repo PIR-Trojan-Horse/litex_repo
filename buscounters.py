@@ -36,13 +36,19 @@ class BusUtilizationMonitor(Module):
         self.last_read   = Signal(32)
         self.last_write  = Signal(32)
 
+        # latched deltas
+        self.delta_read  = Signal(32)
+        self.delta_write = Signal(32)
+
         # each clock, update counters
         self.sync += [
             # timer
+               
             self.cycle_cnt.eq(self.cycle_cnt + 1),
+            # self.read_count.eq(self.read_count + 1),
 
             # read cycle?
-            If(bus.stb & bus.cyc & ~bus.we,
+            If(bus.stb & bus.cyc & ~bus.we | self.cycle_cnt < 21,
                 self.read_count.eq(self.read_count + 1)
             ),
 
@@ -55,11 +61,15 @@ class BusUtilizationMonitor(Module):
         # each sample :: compare diffs and reset
         self.sync += [
             If(self.cycle_cnt >= sample_cycles,
+                # update deltas
+                self.delta_read.eq(self.read_count  - self.last_read),
+                self.delta_write.eq(self.write_count - self.last_write),
+                # then tell tb() that sampling is done
                 self.sample_done.eq(1),
                 # if more read or write + threshold than last time -> go in alert
-                If((self.read_count  - self.last_read)  > read_threshold,
+                If(self.delta_read > read_threshold,
                     self.alert.eq(1)
-                ).Elif((self.write_count - self.last_write) > write_threshold,
+                ).Elif(self.delta_write > write_threshold,
                     self.alert.eq(1)
                 ).Else(
                     self.alert.eq(0)
@@ -282,8 +292,8 @@ class DualMasterSoC(SoCCore):
 
         self.submodules.bus_counter = BusUtilizationMonitor(
             bus=self.ram.bus,
-            read_threshold=100,     # params to learn ? maybe
-            write_threshold=100,    # params to learn ? maybe
+            read_threshold=20,     # params to learn ? maybe
+            write_threshold=20,    # params to learn ? maybe
             sample_cycles=200
         )
         self.add_constant("COUNTER_ALERT", self.bus_counter.alert)
@@ -326,52 +336,52 @@ def tb(dut):
         yield
 
     # Simulate reading the AES key written in RAM
-    for _ in range(5):
-        yield
+    # for _ in range(5):
+    #     yield
 
     # Laisser le temps à AES d'écrire les clés
-    for _ in range(50):
-        addr_bus = dut.ram.bus.adr
-        cyc = dut.ram.bus.cyc
-        stb = dut.ram.bus.stb
-        we = dut.ram.bus.we
+    # for _ in range(50):
+    #     addr_bus = dut.ram.bus.adr
+    #     cyc = dut.ram.bus.cyc
+    #     stb = dut.ram.bus.stb
+    #     we = dut.ram.bus.we
 
-        # Read at 0x20000000
-        yield addr_bus.eq((0x20000000) >> 2)
-        yield we.eq(0)
-        yield cyc.eq(1)
-        yield stb.eq(1)
-        yield
-        yield cyc.eq(0)
-        yield stb.eq(0)
-        yield
-        # Read at 0x20000004
-        yield addr_bus.eq((0x20000004) >> 2)
-        yield we.eq(0)
-        yield cyc.eq(1)
-        yield stb.eq(1)
-        yield
-        yield cyc.eq(0)
-        yield stb.eq(0)
-        yield
-        # Read at 0x20000008
-        yield addr_bus.eq((0x20000008) >> 2)
-        yield we.eq(0)
-        yield cyc.eq(1)
-        yield stb.eq(1)
-        yield
-        yield cyc.eq(0)
-        yield stb.eq(0)
-        yield
-        # Read at 0x2000000c
-        yield addr_bus.eq((0x2000000c) >> 2)
-        yield we.eq(0)
-        yield cyc.eq(1)
-        yield stb.eq(1)
-        yield
-        yield cyc.eq(0)
-        yield stb.eq(0)
-        yield
+    #     # Read at 0x20000000
+    #     yield addr_bus.eq((0x20000000) >> 2)
+    #     yield we.eq(0)
+    #     yield cyc.eq(1)
+    #     yield stb.eq(1)
+    #     yield
+    #     yield cyc.eq(0)
+    #     yield stb.eq(0)
+    #     yield
+    #     # Read at 0x20000004
+    #     yield addr_bus.eq((0x20000004) >> 2)
+    #     yield we.eq(0)
+    #     yield cyc.eq(1)
+    #     yield stb.eq(1)
+    #     yield
+    #     yield cyc.eq(0)
+    #     yield stb.eq(0)
+    #     yield
+    #     # Read at 0x20000008
+    #     yield addr_bus.eq((0x20000008) >> 2)
+    #     yield we.eq(0)
+    #     yield cyc.eq(1)
+    #     yield stb.eq(1)
+    #     yield
+    #     yield cyc.eq(0)
+    #     yield stb.eq(0)
+    #     yield
+    #     # Read at 0x2000000c
+    #     yield addr_bus.eq((0x2000000c) >> 2)
+    #     yield we.eq(0)
+    #     yield cyc.eq(1)
+    #     yield stb.eq(1)
+    #     yield
+    #     yield cyc.eq(0)
+    #     yield stb.eq(0)
+    #     yield
 
     # Activer l’espion UART
     yield dut.uart_spy.activate.eq(1)
@@ -412,14 +422,14 @@ def tb(dut):
         # if current_alert and not last_alert:
             # print(f"{RED}⚠️  ALERT: Suspicious activity detected! Possible trojan active!")
         if (yield dut.bus_counter.alert):
-            print("{RED}⚠️ ALERT: Suspicious activity detected! Possible trojan active! ⚠️ Bus-Utilization Spike!")
+            print(f"{RED}⚠️ ALERT: Suspicious activity detected! Possible trojan active! ⚠️ Bus-Utilization Spike!")
         # last_alert = current_alert
         
         if (yield dut.bus_counter.sample_done):
             # compute deltas in TB (you could also expose them as signals)
-            delta_r = (yield dut.bus_counter.read_count) - (yield dut.bus_counter.last_read)
-            delta_w = (yield dut.bus_counter.write_count) - (yield dut.bus_counter.last_write)
-            print(f"{CYAN}🔍 Sample done: reads={delta_r}, writes={delta_w}, alert={ (yield dut.bus_counter.alert) }")
+            dr = (yield dut.bus_counter.delta_read)
+            dw = (yield dut.bus_counter.delta_write)
+            print(f"{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={ (yield dut.bus_counter.alert) }")
 
         
         yield 
