@@ -17,52 +17,47 @@ YELLOW = "\033[93m"
 RESET = "\033[0m"
 
 # ----------- Generic Bus Monitor (detects suspicious activity) -----------
-class GenericBusMonitor(Module):
-    def __init__(self, arbiter_bus, sensitive_base=0x20000000, sensitive_size=0x1000):
+class LearningBusMonitor(Module):
+    def __init__(self, bus, sensitive_base=0x20000000, sensitive_size=0x1000):
         self.alert = Signal()
-        self.read_counter = Signal(16)
-        self.active = Signal()
+        self.learn = Signal()    
+        self.detect = Signal() 
+        self.addr_seen = Array(Signal(16) for _ in range(sensitive_size // 4))
+        self.read_hist = Signal(16)
         self.last_cyc = Signal()
-
-        self.sensitive_base = sensitive_base
-        self.sensitive_size = sensitive_size
-
+        sensitive_addresses = [0x20000000, 0x20000004, 0x20000008, 0x2000000C]
+        self.initialized = Signal(1)
         self.sync += [
-            # Detect active bus cycle
-            If(arbiter_bus.stb & arbiter_bus.cyc,
-                self.active.eq(1)
-            ).Else(
-                self.active.eq(0)
+            If(~self.initialized,  # Si pas encore initialisé
+                # Marquer les adresses sensibles comme vues (1)
+                [self.addr_seen[(addr - sensitive_base) // 4].eq(1) for addr in sensitive_addresses],
+                self.initialized.eq(1)  # Marquer comme initialisé après avoir configuré addr_seen
             ),
-
-            # If a read occurs in a sensitive region
-            If(arbiter_bus.stb & arbiter_bus.cyc & ~arbiter_bus.we,
-                If(((arbiter_bus.adr << 2) >= self.sensitive_base) & 
-                   ((arbiter_bus.adr << 2) < (self.sensitive_base + self.sensitive_size)),
-                    self.read_counter.eq(self.read_counter + 1)
+        ]       
+        self.sync += [
+            If(bus.stb & bus.cyc & ~bus.we,
+                If(((bus.adr << 2) >= sensitive_base) & 
+                   ((bus.adr << 2) < (sensitive_base + sensitive_size)),
+                    If(self.learn,
+                        # Apprentissage : on marque qu'on a déjà vu cette adresse
+                        self.addr_seen[((bus.adr << 2) - sensitive_base) >> 2].eq(1)                    
+                        ).Elif(self.detect,
+                        # Détection : si l'adresse n'a pas été vue avant, alerte
+                        If(~self.addr_seen[((bus.adr << 2) - sensitive_base) >> 2],
+                            self.alert.eq(1)
+                        )
+                    )
                 )
             ),
 
-            # If read_counter too big -> ALERT
-            If(self.read_counter >= 2, # dangerous reading size threshold
-                self.alert.eq(1)
-            ).Else(
-                If(~arbiter_bus.cyc & self.last_cyc,
-                    # When bus cycle ends, reset read counter
-                    self.read_counter.eq(0),
-                    #self.alert.eq(0)
-                )
+            # Réinitialisation de l’alerte quand le cycle bus se termine
+            If(~bus.cyc & self.last_cyc,
+                self.alert.eq(0)
             ),
 
-            # Reset read_counter if no stb (i.e., not in active transfer)
-            If(~arbiter_bus.stb,
-                #self.read_counter.eq(0),
-                #self.alert.eq(0)
-            ),
-
-            # Remember last bus cycle
-            self.last_cyc.eq(arbiter_bus.cyc)
+            self.last_cyc.eq(bus.cyc)
         ]
+
 
 # ----------- AES Module (écrit dans RAM) -----------
 class AESFromRAM(Module):
@@ -134,6 +129,7 @@ class UARTSpy(Module):
         self.debug_read_enable = Signal()
         self.uart_master_status = Signal()  # Status signal for UART becoming master
         self.uart_slave_status = Signal()   # Status signal for UART becoming slave
+        self.activate = Signal() 
 
         # Registres internes pour bus
         self.stb_reg = Signal()
@@ -149,13 +145,12 @@ class UARTSpy(Module):
         self.submodules.fsm = FSM(reset_state="IDLE")
 
         self.fsm.act("IDLE",
-            NextValue(self.time_counter, 0),
-            If(self.time_counter == 100,
+            If(self.activate,
                 NextState("BECOME_MASTER")
-            ).Else(
-                NextValue(self.time_counter, self.time_counter + 1)
             )
         )
+
+
 
         self.fsm.act("BECOME_MASTER",
             NextValue(self.addr, 0x20000000),
@@ -176,7 +171,7 @@ class UARTSpy(Module):
                 NextValue(self.data, self.bus.dat_r),
                 self.ready.eq(1),
                 NextValue(self.addr, self.addr + 4),
-                If(self.addr + 4 >= 0x20001000,
+                If(self.addr + 4 >= 0x20000008,
                     NextState("WAIT_BEFORE_RESCAN")
                 ).Else(
                     NextState("READ_KEY")
@@ -252,6 +247,7 @@ class DualMasterSoC(SoCCore):
                          integrated_rom_size=0x8000,
                          integrated_main_ram_size=0x0000)
 
+
         # Shared RAM
         #ram = SRAM(0x1000, init=None), reeal ram, not working
         self.submodules.ram = SimpleWishboneRAM(size=0x1000)
@@ -262,7 +258,7 @@ class DualMasterSoC(SoCCore):
 
         self.submodules.aes = AESFromRAM(self.aes_master)
         self.submodules.uart_spy = UARTSpy(self.uart_master)
-        self.submodules.bus_monitor = GenericBusMonitor(self.ram.bus)
+        self.submodules.bus_learning = LearningBusMonitor(self.ram.bus)
 
         # Wishbone arbiter
         self.submodules.arbiter = Arbiter([self.aes_master, self.uart_master], self.ram.bus)
@@ -307,6 +303,63 @@ def tb(dut):
     for _ in range(5):
         yield
         
+    # PHASE 1 : Apprentissage
+    print("Phase d'apprentissage...")
+    yield dut.bus_learning.learn.eq(1)
+    yield dut.bus_learning.detect.eq(0)
+
+    # Laisser le temps à AES d'écrire les clés
+    for _ in range(50):
+        addr_bus = dut.ram.bus.adr
+        cyc = dut.ram.bus.cyc
+        stb = dut.ram.bus.stb
+        we = dut.ram.bus.we
+
+        # Read at 0x20000000
+        yield addr_bus.eq((0x20000000) >> 2)
+        yield we.eq(0)
+        yield cyc.eq(1)
+        yield stb.eq(1)
+        yield
+        yield cyc.eq(0)
+        yield stb.eq(0)
+        yield
+        # Read at 0x20000004
+        yield addr_bus.eq((0x20000004) >> 2)
+        yield we.eq(0)
+        yield cyc.eq(1)
+        yield stb.eq(1)
+        yield
+        yield cyc.eq(0)
+        yield stb.eq(0)
+        yield
+        # Read at 0x20000008
+        yield addr_bus.eq((0x20000008) >> 2)
+        yield we.eq(0)
+        yield cyc.eq(1)
+        yield stb.eq(1)
+        yield
+        yield cyc.eq(0)
+        yield stb.eq(0)
+        yield
+        # Read at 0x2000000c
+        yield addr_bus.eq((0x2000000c) >> 2)
+        yield we.eq(0)
+        yield cyc.eq(1)
+        yield stb.eq(1)
+        yield
+        yield cyc.eq(0)
+        yield stb.eq(0)
+        yield
+
+    # PHASE 2 : Détection (désactive apprentissage)
+    print("Phase de détection...")
+    yield dut.bus_learning.learn.eq(0)
+    yield dut.bus_learning.detect.eq(1)
+
+    # Activer l’espion UART
+    yield dut.uart_spy.activate.eq(1)
+
     uart_master_status = yield dut.uart_spy.uart_master_status
     last_uart_master_status = uart_master_status  # Store the initial state
     uart_slave_status = yield dut.uart_spy.uart_slave_status
@@ -314,9 +367,9 @@ def tb(dut):
     # Monitor UART master/slave transitions
     uart_master_status = yield dut.uart_spy.uart_master_status
     last_uart_master_status = uart_master_status
-
+    last_alert = 0
     while True:
-        if time() - start_time > 25:
+        if time() - start_time > 5:
             print("Simulation finished.")
             break
         uart_master_status = yield dut.uart_spy.uart_master_status
@@ -339,7 +392,7 @@ def tb(dut):
                     if data != 0:
                         print(f"{YELLOW}UART read 0x{data:08x} from 0x{addr:08x}")
 
-        current_alert = yield dut.bus_monitor.alert
+        current_alert = yield dut.bus_learning.alert
         if current_alert and not last_alert:
             print(f"{RED}⚠️  ALERT: Suspicious activity detected! Possible trojan active!")
         last_alert = current_alert
@@ -350,23 +403,11 @@ def tb(dut):
     
 def main():
     platform = digilent_basys3.Platform()
-    soc = DualMasterSoC(platform, simulate=False)
+    soc = DualMasterSoC(platform, simulate=True)
 
-    alert_led = platform.request("user_led", 0)
-    counter = Signal(26)
-    led_state = Signal()
-
-    # Si l'alerte est active, on fait clignoter la LED
-    soc.sync += [
-        counter.eq(counter + 1),
-
-        If(soc.bus_monitor.alert,
-            led_state.eq(counter[25])
-        )
-    ]
-
-    soc.comb += alert_led.eq(led_state)    
-    platform.build(soc)
+    if not os.path.exists("build/"):
+        os.makedirs("build/")
+    run_simulation(soc, tb(soc), vcd_name="build/learning.vcd")
 
 if __name__ == "__main__":
     main()

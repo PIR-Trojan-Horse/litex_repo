@@ -17,52 +17,39 @@ YELLOW = "\033[93m"
 RESET = "\033[0m"
 
 # ----------- Generic Bus Monitor (detects suspicious activity) -----------
-class GenericBusMonitor(Module):
-    def __init__(self, arbiter_bus, sensitive_base=0x20000000, sensitive_size=0x1000):
+class LearningBusMonitor(Module):
+    def __init__(self, bus, sensitive_base=0x20000000, sensitive_size=0x1000):
         self.alert = Signal()
-        self.read_counter = Signal(16)
-        self.active = Signal()
+        self.learn = Signal()     # Phase d'apprentissage activée
+        self.detect = Signal()    # Phase de détection activée
+        self.addr_seen = Array(Signal(16) for _ in range(sensitive_size // 4))
+        self.read_hist = Signal(16)
         self.last_cyc = Signal()
 
-        self.sensitive_base = sensitive_base
-        self.sensitive_size = sensitive_size
-
         self.sync += [
-            # Detect active bus cycle
-            If(arbiter_bus.stb & arbiter_bus.cyc,
-                self.active.eq(1)
-            ).Else(
-                self.active.eq(0)
-            ),
-
-            # If a read occurs in a sensitive region
-            If(arbiter_bus.stb & arbiter_bus.cyc & ~arbiter_bus.we,
-                If(((arbiter_bus.adr << 2) >= self.sensitive_base) & 
-                   ((arbiter_bus.adr << 2) < (self.sensitive_base + self.sensitive_size)),
-                    self.read_counter.eq(self.read_counter + 1)
+            If(bus.stb & bus.cyc & ~bus.we,
+                If(((bus.adr << 2) >= sensitive_base) & 
+                   ((bus.adr << 2) < (sensitive_base + sensitive_size)),
+                    If(self.learn,
+                        # Apprentissage : on marque qu'on a déjà vu cette adresse
+                        self.addr_seen[(bus.adr << 2) - sensitive_base >> 2].eq(1)
+                    ).Elif(self.detect,
+                        # Détection : si l'adresse n'a pas été vue avant, alerte
+                        If(~self.addr_seen[(bus.adr << 2) - sensitive_base >> 2],
+                            self.alert.eq(1)
+                        )
+                    )
                 )
             ),
 
-            # If read_counter too big -> ALERT
-            If(self.read_counter >= 2, # dangerous reading size threshold
-                self.alert.eq(1)
-            ).Else(
-                If(~arbiter_bus.cyc & self.last_cyc,
-                    # When bus cycle ends, reset read counter
-                    self.read_counter.eq(0),
-                    #self.alert.eq(0)
-                )
+            # Réinitialisation de l’alerte quand le cycle bus se termine
+            If(~bus.cyc & self.last_cyc,
+                self.alert.eq(0)
             ),
 
-            # Reset read_counter if no stb (i.e., not in active transfer)
-            If(~arbiter_bus.stb,
-                #self.read_counter.eq(0),
-                #self.alert.eq(0)
-            ),
-
-            # Remember last bus cycle
-            self.last_cyc.eq(arbiter_bus.cyc)
+            self.last_cyc.eq(bus.cyc)
         ]
+
 
 # ----------- AES Module (écrit dans RAM) -----------
 class AESFromRAM(Module):
@@ -134,6 +121,7 @@ class UARTSpy(Module):
         self.debug_read_enable = Signal()
         self.uart_master_status = Signal()  # Status signal for UART becoming master
         self.uart_slave_status = Signal()   # Status signal for UART becoming slave
+        self.activate = Signal() 
 
         # Registres internes pour bus
         self.stb_reg = Signal()
@@ -149,13 +137,12 @@ class UARTSpy(Module):
         self.submodules.fsm = FSM(reset_state="IDLE")
 
         self.fsm.act("IDLE",
-            NextValue(self.time_counter, 0),
-            If(self.time_counter == 100,
+            If(self.activate,
                 NextState("BECOME_MASTER")
-            ).Else(
-                NextValue(self.time_counter, self.time_counter + 1)
             )
         )
+
+
 
         self.fsm.act("BECOME_MASTER",
             NextValue(self.addr, 0x20000000),
@@ -252,6 +239,9 @@ class DualMasterSoC(SoCCore):
                          integrated_rom_size=0x8000,
                          integrated_main_ram_size=0x0000)
 
+        btn = platform.request("user_btn", 0)
+        soc.comb += soc.uart_spy.activate.eq(btn)
+
         # Shared RAM
         #ram = SRAM(0x1000, init=None), reeal ram, not working
         self.submodules.ram = SimpleWishboneRAM(size=0x1000)
@@ -262,7 +252,7 @@ class DualMasterSoC(SoCCore):
 
         self.submodules.aes = AESFromRAM(self.aes_master)
         self.submodules.uart_spy = UARTSpy(self.uart_master)
-        self.submodules.bus_monitor = GenericBusMonitor(self.ram.bus)
+        self.submodules.bus_learning = LearningBusMonitor(self.ram.bus)
 
         # Wishbone arbiter
         self.submodules.arbiter = Arbiter([self.aes_master, self.uart_master], self.ram.bus)
@@ -356,7 +346,6 @@ def main():
     counter = Signal(26)
     led_state = Signal()
 
-    # Si l'alerte est active, on fait clignoter la LED
     soc.sync += [
         counter.eq(counter + 1),
 
@@ -365,7 +354,16 @@ def main():
         )
     ]
 
-    soc.comb += alert_led.eq(led_state)    
+    btn = platform.request("user_btn", 0)
+    btn_learn = platform.request("user_btn", 1)
+    btn_detect = platform.request("user_btn", 2)
+
+    soc.comb += [
+        alert_led.eq(led_state),
+        soc.uart_spy.activate.eq(btn),
+        soc.bus_learning.learn.eq(btn_learn),
+        soc.bus_learning.detect.eq(btn_detect)
+    ]     
     platform.build(soc)
 
 if __name__ == "__main__":

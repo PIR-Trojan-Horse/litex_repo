@@ -1,5 +1,5 @@
 from migen import *
-from migen.genlib.fsm import FSM, NextState, NextValue
+from migen.genlib.fsm import FSM, NextState
 from migen.sim import run_simulation
 from migen.genlib.resetsync import AsyncResetSynchronizer
 
@@ -7,6 +7,9 @@ from litex.soc.integration.soc_core import SoCCore, SoCRegion
 from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.wishbone import Arbiter, SRAM
 from litex_boards.platforms import digilent_basys3
+from migen import *
+from migen.genlib.fsm import FSM, NextState, NextValue
+from litex.soc.interconnect.csr import AutoCSR, CSRStatus
 from time import time
 
 import os
@@ -16,52 +19,60 @@ GREEN = "\033[92m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
 
-# ----------- Generic Bus Monitor (detects suspicious activity) -----------
-class GenericBusMonitor(Module):
-    def __init__(self, arbiter_bus, sensitive_base=0x20000000, sensitive_size=0x1000):
-        self.alert = Signal()
-        self.read_counter = Signal(16)
-        self.active = Signal()
-        self.last_cyc = Signal()
+class AnomalyDetector:
+    def __init__(self, learning_cycles=1000):
+        self.learning_cycles = learning_cycles
+        self.cycle = 0
+        self.learning = True
+        self.access_counts = {}  # maître -> nb d’accès
+        self.threshold = None  # seuil à fixer après apprentissage
+        self.alert_flag = False
 
-        self.sensitive_base = sensitive_base
-        self.sensitive_size = sensitive_size
+    def observe(self, master_id):
+        if master_id not in self.access_counts:
+            self.access_counts[master_id] = 0
+        self.access_counts[master_id] += 1
+        self.cycle += 1
+
+        if self.learning and self.cycle >= self.learning_cycles:
+            self.learning = False
+            self.compute_threshold()
+
+        if not self.learning:
+            self.alert_flag = self.is_anomalous(master_id)
+
+    def compute_threshold(self):
+        values = list(self.access_counts.values())
+        if not values:
+            self.threshold = 1
+            return
+        avg = sum(values) / len(values)
+        self.threshold = avg * 1.5  # seuil simple
+
+    def is_anomalous(self, master_id):
+        return self.access_counts.get(master_id, 0) > self.threshold
+
+class MachineLearning(Module, AutoCSR):
+    def __init__(self, masters_signals):
+        self.alert = CSRStatus(1)
+        self.detector = AnomalyDetector(learning_cycles=1000)
+
+        # Generate a combinatorial alert signal
+        self._alert_signal = Signal()
 
         self.sync += [
-            # Detect active bus cycle
-            If(arbiter_bus.stb & arbiter_bus.cyc,
-                self.active.eq(1)
-            ).Else(
-                self.active.eq(0)
-            ),
-
-            # If a read occurs in a sensitive region
-            If(arbiter_bus.stb & arbiter_bus.cyc & ~arbiter_bus.we,
-                If(((arbiter_bus.adr << 2) >= self.sensitive_base) & 
-                   ((arbiter_bus.adr << 2) < (self.sensitive_base + self.sensitive_size)),
-                    self.read_counter.eq(self.read_counter + 1)
+            # Observe accesses at each cycle
+            *[
+                If(ms.bus.cyc & ms.bus.stb,  # Corrected from ms.cyc & ms.stb to ms.bus.cyc & ms.bus.stb
+                    self.detector.observe(mid),
                 )
-            ),
+                for mid, ms in enumerate(masters_signals)
+            ],
 
-            # If read_counter too big -> ALERT
-            If(self.read_counter >= 2, # dangerous reading size threshold
-                self.alert.eq(1)
-            ).Else(
-                If(~arbiter_bus.cyc & self.last_cyc,
-                    # When bus cycle ends, reset read counter
-                    self.read_counter.eq(0),
-                    #self.alert.eq(0)
-                )
-            ),
-
-            # Reset read_counter if no stb (i.e., not in active transfer)
-            If(~arbiter_bus.stb,
-                #self.read_counter.eq(0),
-                #self.alert.eq(0)
-            ),
-
-            # Remember last bus cycle
-            self.last_cyc.eq(arbiter_bus.cyc)
+            # Update the CSR alert if anomaly detected
+            If(self.detector.alert_flag,
+                self.alert.status.eq(1)
+            )
         ]
 
 # ----------- AES Module (écrit dans RAM) -----------
@@ -121,8 +132,8 @@ class AESFromRAM(Module):
         )
 
 
-# ----------- UART Spy (lit depuis RAM) -----------
 
+# ----------- UART Spy (lit depuis RAM) -----------
 class UARTSpy(Module):
     def __init__(self, bus):
         self.bus = bus  # Wishbone master interface
@@ -191,7 +202,7 @@ class UARTSpy(Module):
             NextValue(self.cyc_reg, 0),
             NextValue(self.we_reg, 0),
             self.debug_read_enable.eq(0),
-            If(self.time_counter >= 100,
+            If(self.time_counter >= 5000,
                 NextValue(self.time_counter, 0),
                 NextValue(self.addr, 0x20000000),
                 NextState("BECOME_MASTER")
@@ -215,8 +226,6 @@ class UARTSpy(Module):
             self.bus.adr.eq(self.adr_reg),
             self.bus.dat_w.eq(self.dat_w_reg)
         ]
-
-
 
 # ----------- Personal RAM component -----------
 class SimpleWishboneRAM(Module):
@@ -262,10 +271,13 @@ class DualMasterSoC(SoCCore):
 
         self.submodules.aes = AESFromRAM(self.aes_master)
         self.submodules.uart_spy = UARTSpy(self.uart_master)
-        self.submodules.bus_monitor = GenericBusMonitor(self.ram.bus)
 
         # Wishbone arbiter
         self.submodules.arbiter = Arbiter([self.aes_master, self.uart_master], self.ram.bus)
+
+        self.machinelearning = MachineLearning([self.uart_spy])
+        self.submodules += self.machinelearning
+        self.add_csr("machinelearning")
 
         # Memory map
         self.bus.add_slave("shared_ram", self.ram.bus,region=SoCRegion(origin=0x20000000, size=0x1000))
@@ -339,35 +351,25 @@ def tb(dut):
                     if data != 0:
                         print(f"{YELLOW}UART read 0x{data:08x} from 0x{addr:08x}")
 
-        current_alert = yield dut.bus_monitor.alert
+        current_alert = yield dut.machineleaning.alert
         if current_alert and not last_alert:
             print(f"{RED}⚠️  ALERT: Suspicious activity detected! Possible trojan active!")
         last_alert = current_alert
         yield 
 
+ 
+
 
 
     
+# ----------- Run Simulation -----------
 def main():
     platform = digilent_basys3.Platform()
-    soc = DualMasterSoC(platform, simulate=False)
+    soc = DualMasterSoC(platform, simulate=True)
+    if not os.path.exists("build/"):
+        os.makedirs("build/")
 
-    alert_led = platform.request("user_led", 0)
-    counter = Signal(26)
-    led_state = Signal()
-
-    # Si l'alerte est active, on fait clignoter la LED
-    soc.sync += [
-        counter.eq(counter + 1),
-
-        If(soc.bus_monitor.alert,
-            led_state.eq(counter[25])
-        )
-    ]
-
-    soc.comb += alert_led.eq(led_state)    
-    platform.build(soc)
+    run_simulation(soc, tb(soc), vcd_name="build/ml.vcd")
 
 if __name__ == "__main__":
     main()
-
