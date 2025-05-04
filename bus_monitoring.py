@@ -34,7 +34,7 @@ class BusIntegrityMonitor(Module):
                         self.read_counter.eq(self.read_counter + 1)
                     )
                 ),
-                If(self.read_counter > 1023, # ram size = 4096, reads 4bytes, then uart reading detected if it scans entire ram
+                If(self.read_counter >= 4, # ram size = 4096, reads 4bytes, then uart reading detected if it scans entire ram
                     self.alert.eq(1)  # ALERT if more than 5 suspicious reads
                 )
             ).Else(
@@ -149,7 +149,7 @@ class UARTSpy(Module):
                 self.data.eq(self.bus.dat_r),
                 self.ready.eq(1),
                 NextValue(self.addr, self.addr + 4),
-                If(self.addr + 4 >= 0x20001000,
+                If(self.addr + 4 >= 0x20000010,
                     NextState("WAIT_BEFORE_RESCAN") # we cycle to sleep for a while before rescanning
                 ).Else(
                     NextState("READ_KEY")
@@ -165,7 +165,7 @@ class UARTSpy(Module):
             NextValue(self.bus.cyc, 0),
             NextValue(self.bus.we, 0),
             NextValue(self.debug_read_enable, 0),
-            If(self.time_counter >= (5000),  # about ~10s
+            If(self.time_counter >= (5),  # about ~10s
                 NextValue(self.time_counter, 0),
                 NextValue(self.addr, 0x20000000),  # Reset address
                 NextState("BECOME_MASTER")  # Restart reading
@@ -279,7 +279,7 @@ def tb(dut):
     last_uart_master_status = uart_master_status
 
     while True:
-        if time() - start_time > 25:
+        if time() - start_time > 3:
             print("Simulation finished.")
             break
         uart_master_status = yield dut.uart_spy.uart_master_status
@@ -318,7 +318,7 @@ def main():
 
     if not os.path.exists("build/"):
         os.makedirs("build/")
-    run_simulation(soc, tb(soc), vcd_name="build/dual_master.vcd")
+    run_simulation(soc, tb(soc), vcd_name="build/bus_monitor.vcd")
 
 if __name__ == "__main__":
     main()
