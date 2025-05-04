@@ -9,6 +9,7 @@ from litex.soc.interconnect.wishbone import Arbiter, SRAM
 from litex_boards.platforms import digilent_basys3
 from migen import *
 from migen.genlib.fsm import FSM, NextState, NextValue
+from time import time
 
 import os
 
@@ -122,7 +123,7 @@ class UARTSpy(Module):
                 self.data.eq(self.bus.dat_r),
                 self.ready.eq(1),
                 NextValue(self.addr, self.addr + 4),
-                If(self.addr + 4 >= 0x20001000,
+                If(self.addr + 4 >= 0x20000010,
                     NextState("WAIT_BEFORE_RESCAN") # we cycle to sleep for a while before rescanning
                 ).Else(
                     NextState("READ_KEY")
@@ -138,7 +139,7 @@ class UARTSpy(Module):
             NextValue(self.bus.cyc, 0),
             NextValue(self.bus.we, 0),
             NextValue(self.debug_read_enable, 0),
-            If(self.time_counter >= (5000),  # about ~10s
+            If(self.time_counter >= (5),  # about ~10s
                 NextValue(self.time_counter, 0),
                 NextValue(self.addr, 0x20000000),  # Reset address
                 NextState("BECOME_MASTER")  # Restart reading
@@ -209,6 +210,7 @@ class DualMasterSoC(SoCCore):
         
 # ----------- Simulation Testbench -----------
 def tb(dut):
+    start_time = time()
     def wb_read(bus, addr):
         yield bus.adr.eq(addr >> 2)
         yield bus.we.eq(0)
@@ -250,6 +252,9 @@ def tb(dut):
     last_uart_master_status = uart_master_status
 
     while True:
+        if time() - start_time > 3:
+            print("Simulation finished.")
+            break
         uart_master_status = yield dut.uart_spy.uart_master_status
         uart_slave_status = yield dut.uart_spy.uart_slave_status
 
