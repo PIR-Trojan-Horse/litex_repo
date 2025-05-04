@@ -41,7 +41,7 @@ class LearningBusMonitor(Module):
                     If(self.learn,
                         # Apprentissage : on marque qu'on a déjà vu cette adresse
                         self.addr_seen[((bus.adr << 2) - sensitive_base) >> 2].eq(1)                    
-                        ).Elif(self.detect,
+                    ).Elif(self.detect,
                         # Détection : si l'adresse n'a pas été vue avant, alerte
                         If(~self.addr_seen[((bus.adr << 2) - sensitive_base) >> 2],
                             self.alert.eq(1)

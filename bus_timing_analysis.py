@@ -4,6 +4,7 @@ from migen.sim import run_simulation
 from migen.genlib.resetsync import AsyncResetSynchronizer
 
 from litex.soc.integration.soc_core import SoCCore, SoCRegion
+from litex.soc.interconnect.csr import AutoCSR, CSRStatus
 from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.wishbone import Arbiter, SRAM
 from litex_boards.platforms import digilent_basys3
@@ -31,7 +32,7 @@ class TimingAnalysis(Module):
         self.minimum_acess = minimum_legitimate_access
         self.maximum_acess = maximum_legitimate_access
         
-        # self.comb += []
+        self.comb += self.alert.eq((self.read_counter > maximum_legitimate_access) | ((self.read_counter < minimum_legitimate_access) & ~self.reading))
 
         self.sync += [
             If(self.reading,
@@ -229,7 +230,7 @@ class DualMasterSoC(SoCCore):
 
         self.submodules.aes = AESFromRAM(self.aes_master)
         self.submodules.uart_spy = UARTSpy(self.uart_master)
-        self.submodules.bus_monitor = GenericBusMonitor(self.ram.bus)
+        self.submodules.timing_monitor = TimingAnalysis(self.ram.bus,4,10)
 
         # Wishbone arbiter
         self.submodules.arbiter = Arbiter([self.aes_master, self.uart_master], self.ram.bus)
@@ -306,7 +307,7 @@ def tb(dut):
                     if data != 0:
                         print(f"{YELLOW}UART read 0x{data:08x} from 0x{addr:08x}")
 
-        current_alert = yield dut.bus_monitor.alert
+        current_alert = yield dut.timing_monitor.alert
         if current_alert and not last_alert:
             print(f"{RED}⚠️  ALERT: Suspicious activity detected! Possible trojan active!")
         last_alert = current_alert
