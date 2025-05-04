@@ -369,7 +369,7 @@ def tb(dut):
     last_uart_master_status = uart_master_status
     last_alert = 0
     while True:
-        if time() - start_time > 5:
+        if time() - start_time > 500:
             print("Simulation finished.")
             break
         uart_master_status = yield dut.uart_spy.uart_master_status
