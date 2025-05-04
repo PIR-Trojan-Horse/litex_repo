@@ -48,7 +48,7 @@ class BusUtilizationMonitor(Module):
             # self.read_count.eq(self.read_count + 1),
 
             # read cycle?
-            If(bus.stb & bus.cyc & ~bus.we | self.cycle_cnt < 21,
+            If(bus.stb & bus.cyc & ~bus.we,# | self.cycle_cnt < 21,
                 self.read_count.eq(self.read_count + 1)
             ),
 
@@ -82,7 +82,9 @@ class BusUtilizationMonitor(Module):
                 # reset timer for next sample
                 self.cycle_cnt.eq(0),
             ).Else(
-                self.sample_done.eq(0)
+                # reset all flags
+                self.sample_done.eq(0),
+                self.alert.eq(0)
             )
         ]
 
@@ -443,7 +445,7 @@ def main():
 
     if not os.path.exists("build/"):
         os.makedirs("build/")
-    run_simulation(soc, tb(soc), vcd_name="build/learning.vcd")
+    run_simulation(soc, tb(soc), vcd_name="build/busCounters.vcd")
 
 if __name__ == "__main__":
     main()

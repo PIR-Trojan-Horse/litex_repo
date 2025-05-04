@@ -1,0 +1,46 @@
+INFO:SoC:--------------------------------------------------------------------------------
+Waiting for AES to write key...
+AES wrote 0xdeadbeef to 0x20000000
+AES wrote 0x12345678 to 0x20000004
+AES wrote 0x90abcdef to 0x20000008
+AES wrote 0xcafebabe to 0x2000000c
+Phase d'apprentissage...
+Phase de détection...
+UART has become MASTER!
+UART read 0xdeadbeef from 0x20000004
+⚠️  ALERT: Suspicious activity detected! Possible trojan active!
+UART has become SLAVE!
+UART has become MASTER!
+UART read 0xdeadbeef from 0x20000000
+UART read 0x12345678 from 0x20000004
+⚠️  ALERT: Suspicious activity detected! Possible trojan active!
+UART has become SLAVE!
+UART has become MASTER!
+UART read 0xdeadbeef from 0x20000000
+UART read 0x12345678 from 0x20000004
+⚠️  ALERT: Suspicious activity detected! Possible trojan active!
+UART has become SLAVE!
+UART has become MASTER!
+UART read 0xdeadbeef from 0x20000000
+UART read 0x12345678 from 0x20000004
+⚠️  ALERT: Suspicious activity detected! Possible trojan active!
+UART has become SLAVE!
+UART has become MASTER!
+UART read 0xdeadbeef from 0x20000000
+UART read 0x12345678 from 0x20000004
+⚠️  ALERT: Suspicious activity detected! Possible trojan active!
+UART has become SLAVE!
+UART has become MASTER!
+UART read 0xdeadbeef from 0x20000000
+UART read 0x12345678 from 0x20000004
+⚠️  ALERT: Suspicious activity detected! Possible trojan active!
+UART has become SLAVE!
+UART has become MASTER!
+UART read 0xdeadbeef from 0x20000000
+UART read 0x12345678 from 0x20000004
+⚠️  ALERT: Suspicious activity detected! Possible trojan active!
+UART has become SLAVE!
+UART has become MASTER!
+UART read 0xdeadbeef from 0x20000000
+UART read 0x12345678 from 0x20000004
+⚠️  ALERT: Suspicious activity detected! Possible trojan active!
