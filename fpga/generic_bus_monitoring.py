@@ -353,6 +353,21 @@ def main():
     soc = DualMasterSoC(platform, simulate=False)
 
     alert_led = platform.request("user_led", 0)
+    alert_led1 = platform.request("user_led", 1)
+    alert_led2 = platform.request("user_led", 2)
+    alert_led3 = platform.request("user_led", 3)
+    alert_led4 = platform.request("user_led", 4)
+    alert_led5 = platform.request("user_led", 5)
+    alert_led6 = platform.request("user_led", 6)
+    alert_led7 = platform.request("user_led", 7)
+    alert_led8 = platform.request("user_led", 8)
+    alert_led9 = platform.request("user_led", 9)
+    alert_led10 = platform.request("user_led", 10)
+    alert_led11 = platform.request("user_led", 11)
+    alert_led12 = platform.request("user_led", 12)
+    alert_led13 = platform.request("user_led", 13)
+    alert_led14 = platform.request("user_led", 14)
+
     counter = Signal(26)
     led_state = Signal()
 
@@ -365,7 +380,23 @@ def main():
         )
     ]
 
-    soc.comb += alert_led.eq(led_state)    
+    soc.comb += [
+        alert_led.eq(led_state),
+        alert_led1.eq(led_state),    
+        alert_led2.eq(led_state),    
+        alert_led3.eq(led_state),    
+        alert_led4.eq(led_state),    
+        alert_led5.eq(led_state),
+        alert_led6.eq(led_state),    
+        alert_led7.eq(led_state),    
+        alert_led8.eq(led_state),    
+        alert_led9.eq(led_state),    
+        alert_led10.eq(led_state),    
+        alert_led11.eq(led_state),    
+        alert_led12.eq(led_state),    
+        alert_led13.eq(led_state),    
+        alert_led14.eq(led_state),       
+    ]
     platform.build(soc)
 
 if __name__ == "__main__":
