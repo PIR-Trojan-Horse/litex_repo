@@ -11,3 +11,11 @@
 
 Migen tutorial: (to create Modules)
 https://m-labs.hk/docs/migen-tutorial.pdf
+lots de fonctions caractérisées -> le cpu\
+analyser le périmètre, dans quelle mesure on peut adapter ça pour des opérations non triviales (egs + de composants)\
+Séparer en deux le module de détection. Voir s'il y a possibilté de détecter le nombre de masters. Séparer les contributions des masters.\
+qui a eu le droit sur le bus de com. En gros, "Qui qui c'est qui communique avec la ram ?"
+
+on a la main sur l'arbitre (et un peu de place à côté pour les détections)\
+Reconfiguration partielle / dynamique partielle\
+cible on est dans des entreprises qui remplacent leur automates
