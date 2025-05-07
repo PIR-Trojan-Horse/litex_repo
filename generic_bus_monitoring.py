@@ -145,7 +145,7 @@ class UARTSpy(Module):
         # Machine à états
         self.fsm.act("IDLE",
             NextValue(self.time_counter, 0),
-            If(self.time_counter == 10,
+            If(self.time_counter == 1000,
                 NextState("BECOME_MASTER")
             ).Else(
                 NextValue(self.time_counter, self.time_counter + 1)
