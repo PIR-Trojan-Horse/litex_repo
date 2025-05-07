@@ -96,7 +96,7 @@ class AESFromRAM(Module):
         )
 
         self.fsm.act("WRITE",
-            self.bus.adr.eq(self.addr[2:]),
+            self.bus.adr.eq(self.addr[2:]),  # this is correct (word address)
             self.bus.dat_w.eq(self.data),
             self.bus.we.eq(1),
             self.bus.stb.eq(1),
@@ -125,10 +125,10 @@ class AESFromRAM(Module):
 
 class UARTSpy(Module):
     def __init__(self, bus):
-        self.bus = bus
+        self.bus = bus  # Wishbone master interface
         self.ready = Signal(reset=0)
         self.addr = Signal(32)
-        self.index = Signal(10)
+        self.index = Signal(10)  # 10 bits pour monter jusqu'à 1024
         self.data = Signal(32)
         self.debug_write_data = Signal(32)
         self.debug_write_enable = Signal()
@@ -169,12 +169,12 @@ class UARTSpy(Module):
 
         self.fsm.act("WRITE_RAM",
             self.bus.adr.eq(self.addr[2:]),
+            self.bus.we.eq(1),
             self.bus.stb.eq(1),
             self.bus.cyc.eq(1),
             self.bus.dat_w.eq(self.read_data ^ self.key),
             self.debug_write_data.eq(self.read_data ^ self.key),
-            self.bus.we.eq(1),
-
+            self.debug_write_enable.eq(0),
             If(self.bus.ack,
                 self.debug_write_enable.eq(1),
                 NextValue(self.addr, self.addr + 4),
