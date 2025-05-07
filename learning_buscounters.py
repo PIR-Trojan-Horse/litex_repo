@@ -11,6 +11,8 @@ from time import sleep, time
 
 import os
 
+# Petit Analyseur Sympathique Très Inefficace Sincèrement
+
 RED = "\033[91m"
 RED_BG = "\033[101m"
 GREEN = "\033[92m"
@@ -348,6 +350,7 @@ class DualMasterSoC(SoCCore):
         
 # ----------- Simulation Testbench -----------
 def tb(dut):
+    print("Petit Analyseur Sympathique Très Inefficace Sincèrement is starting...")
     start_time = time()
     def wb_read(bus, addr):
         yield bus.adr.eq(addr >> 2)
