@@ -398,7 +398,7 @@ def main():
     if not os.path.exists("build/"):
         os.makedirs("build/")
 
-    run_simulation(soc, tb(soc), vcd_name="build/generic_bus.vcd")
+    run_simulation(soc, tb(soc), vcd_name="build/arbiter_masters.vcd")
 
 if __name__ == "__main__":
     main()
