@@ -76,23 +76,6 @@ class BusUtilizationMonitor(Module):
         self.delta_write = Signal(32)
         
         self.zero = Signal()
-
-        # each clock, update counters
-        # self.sync += [
-        #     # timer
-        #     self.cycle_cnt.eq(self.cycle_cnt + 1),
-        #     # self.read_count.eq(self.read_count + 1),
-
-        #     # read cycle?
-        #     If(bus.stb & bus.cyc & ~bus.we,# | self.cycle_cnt < 21,
-        #         self.read_count.eq(self.read_count + 1)
-        #     ),
-
-        #     # write cycle?
-        #     If(bus.stb & bus.cyc & bus.we,
-        #         self.write_count.eq(self.write_count + 1)
-        #     )
-        # ]
         
         self.sync += [
             self.cycle_cnt.eq(self.cycle_cnt + 1),
@@ -166,8 +149,8 @@ class BusUtilizationMonitor(Module):
                     ],
                 ),
 
-                self.last_reads[self.arbiter.grant].eq(self.read_counts[self.arbiter.grant]),
-                self.last_writes[self.arbiter.grant].eq(self.write_counts[self.arbiter.grant]),
+                *[self.last_reads[i].eq(self.read_counts[i]) for i in range(n_masters)],
+                *[self.last_writes[i].eq(self.write_counts[i]) for i in range(n_masters)],
 
                 # remise à zéro de tous les compteurs
                 *[self.read_counts[i].eq(0) for i in range(n_masters)],

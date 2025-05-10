@@ -1,0 +1,59 @@
+Phase d'apprentissage...
+LEARNING… window read=[0, 0, 4] write=[0, 0, 0] | current: rt=[0, 0, 0] wt=[0, 0, 0]
+LEARNING… window read=[0, 0, 0] write=[0, 0, 0] | current: rt=[1, 1, 5] wt=[1, 1, 1]
+LEARNING… window read=[0, 0, 0] write=[0, 0, 0] | current: rt=[1, 1, 5] wt=[1, 1, 1]
+LEARNING… window read=[0, 0, 0] write=[0, 0, 0] | current: rt=[1, 1, 5] wt=[1, 1, 1]
+LEARNING… window read=[0, 0, 0] write=[0, 0, 0] | current: rt=[1, 1, 5] wt=[1, 1, 1]
+LEARNING… window read=[0, 0, 0] write=[0, 0, 0] | current: rt=[1, 1, 5] wt=[1, 1, 1]
+LEARNING… window read=[0, 0, 0] write=[0, 0, 0] | current: rt=[1, 1, 5] wt=[1, 1, 1]
+LEARNING… window read=[0, 0, 0] write=[0, 0, 0] | current: rt=[1, 1, 5] wt=[1, 1, 1]
+LEARNING… window read=[0, 0, 0] write=[0, 0, 0] | current: rt=[1, 1, 5] wt=[1, 1, 1]
+Phase de détection...
+Trojan is active...
+Trojan is active...
+UART has become MASTER!
+UART read 0x90abcdef from 0x20000004
+UART has become SLAVE!
+🔍 Sample done: reads=[0, 2, 10](Δ=[0, 2, 2]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+⚠️ ALERT: Suspicious activity detected! Possible Trojan active! ⚠️ Bus-Utilization Spike!
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 2, 2]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=1, EXPECTED: deltaAuthorized r:[1, 1, 5];w:[1, 1, 1]
+⚠️ ALERT: Suspicious activity detected! Possible Trojan active! ⚠️ Bus-Utilization Spike!
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=1, EXPECTED: deltaAuthorized r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+Trojan is active...
+UART has become MASTER!
+🔍 Sample done: reads=[0, 0, 3](Δ=[0, 0, 9]), writes=[8, 9, 0](Δ=[0, 9, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+⚠️ ALERT: Suspicious activity detected! Possible Trojan active! ⚠️ Bus-Utilization Spike!
+🔍 Sample done: reads=[0, 0, 0](Δ=[0, 0, 3]), writes=[8, 12, 0](Δ=[0, 3, 0]), alert=1, EXPECTED: deltaAuthorized r:[1, 1, 5];w:[1, 1, 1]
+⚠️ ALERT: Suspicious activity detected! Possible Trojan active! ⚠️ Bus-Utilization Spike!
+🔍 Sample done: reads=[0, 0, 0](Δ=[0, 0, 0]), writes=[8, 12, 0](Δ=[0, 0, 0]), alert=1, EXPECTED: deltaAuthorized r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 0](Δ=[0, 0, 0]), writes=[8, 12, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 0](Δ=[0, 0, 0]), writes=[8, 12, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+UART has become SLAVE!
+🔍 Sample done: reads=[0, 0, 6](Δ=[0, 0, 6]), writes=[8, 6, 0](Δ=[0, 6, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+⚠️ ALERT: Suspicious activity detected! Possible Trojan active! ⚠️ Bus-Utilization Spike!
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 6]), writes=[8, 0, 0](Δ=[0, 6, 0]), alert=1, EXPECTED: deltaAuthorized r:[1, 1, 5];w:[1, 1, 1]
+⚠️ ALERT: Suspicious activity detected! Possible Trojan active! ⚠️ Bus-Utilization Spike!
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=1, EXPECTED: deltaAuthorized r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+Trojan is active...
+UART has become MASTER!
+UART read 0x12345678 from 0x20000004
+🔍 Sample done: reads=[0, 1, 11](Δ=[0, 1, 1]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+UART has become SLAVE!
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 1, 1]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
+🔍 Sample done: reads=[0, 0, 12](Δ=[0, 0, 0]), writes=[8, 0, 0](Δ=[0, 0, 0]), alert=0 Exp: r:[1, 1, 5];w:[1, 1, 1]
