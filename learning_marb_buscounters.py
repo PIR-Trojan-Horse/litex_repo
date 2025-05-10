@@ -43,20 +43,20 @@ class BusUtilizationMonitor(Module):
         self.write_threshold = Signal(32)
         
         # Seuils master-spécifiques
-        self.read_thresholds  = Array(Signal(32, reset=0) for _ in range(n_masters))
-        self.write_thresholds = Array(Signal(32, reset=0) for _ in range(n_masters))
+        self.read_thresholds  = Array([Signal(32, reset=0) for _ in range(n_masters)])
+        self.write_thresholds = Array([Signal(32, reset=0) for _ in range(n_masters)])
 
         # Compteurs master-spécifiques
-        self.read_counts  = Array(Signal(32, reset=0) for _ in range(n_masters))
-        self.write_counts = Array(Signal(32, reset=0) for _ in range(n_masters))
+        self.read_counts  = Array([Signal(32, reset=0) for _ in range(n_masters)])
+        self.write_counts = Array([Signal(32, reset=0) for _ in range(n_masters)])
 
         # Snapshots master-spécifiques
-        self.last_reads  = Array(Signal(32, reset=0) for _ in range(n_masters))
-        self.last_writes = Array(Signal(32, reset=0) for _ in range(n_masters))
+        self.last_reads  = Array([Signal(32, reset=0) for _ in range(n_masters)])
+        self.last_writes = Array([Signal(32, reset=0) for _ in range(n_masters)])
 
         # Deltas master-spécifiques
-        self.delta_reads  = Array(Signal(32, reset=0) for _ in range(n_masters))
-        self.delta_writes = Array(Signal(32, reset=0) for _ in range(n_masters))
+        self.delta_reads  = Array([Signal(32, reset=0) for _ in range(n_masters)])
+        self.delta_writes = Array([Signal(32, reset=0) for _ in range(n_masters)])
         
         # self.read_min_threshold  = Signal(32)
         # self.write_min_threshold = Signal(32)
@@ -78,21 +78,21 @@ class BusUtilizationMonitor(Module):
         self.zero = Signal()
 
         # each clock, update counters
-        self.sync += [
-            # timer
-            self.cycle_cnt.eq(self.cycle_cnt + 1),
-            # self.read_count.eq(self.read_count + 1),
+        # self.sync += [
+        #     # timer
+        #     self.cycle_cnt.eq(self.cycle_cnt + 1),
+        #     # self.read_count.eq(self.read_count + 1),
 
-            # read cycle?
-            If(bus.stb & bus.cyc & ~bus.we,# | self.cycle_cnt < 21,
-                self.read_count.eq(self.read_count + 1)
-            ),
+        #     # read cycle?
+        #     If(bus.stb & bus.cyc & ~bus.we,# | self.cycle_cnt < 21,
+        #         self.read_count.eq(self.read_count + 1)
+        #     ),
 
-            # write cycle?
-            If(bus.stb & bus.cyc & bus.we,
-                self.write_count.eq(self.write_count + 1)
-            )
-        ]
+        #     # write cycle?
+        #     If(bus.stb & bus.cyc & bus.we,
+        #         self.write_count.eq(self.write_count + 1)
+        #     )
+        # ]
         
         self.sync += [
             self.cycle_cnt.eq(self.cycle_cnt + 1),
@@ -160,72 +160,84 @@ class BusUtilizationMonitor(Module):
         #     )
         # ]
         
-        stmts = []
-        for i in range(self.n_masters):
-            stmts.append( NextValue(self.last_reads[i],  self.read_counts[i]) )
-            stmts.append( NextValue(self.last_writes[i], self.write_counts[i]) )
-            stmts.append( NextValue(self.read_counts[i],  0)               )
-            stmts.append( NextValue(self.write_counts[i], 0)               )
     
         self.sync += [
             If(self.cycle_cnt >= sample_cycles,
-                # pour chaque maître i
-                # *[
-                #     # calcule du delta absolu
-                #     If(self.read_counts[i] > self.last_reads[i],
-                #        self.delta_reads[i].eq(self.read_counts[i] - self.last_reads[i])
-                #     ).Else(
-                #        self.delta_reads[i].eq(self.last_reads[i] - self.read_counts[i])
-                #     ),
-                #     If(self.write_counts[i] > self.last_writes[i],
-                #        self.delta_writes[i].eq(self.write_counts[i] - self.last_writes[i])
-                #     ).Else(
-                #        self.delta_writes[i].eq(self.last_writes[i] - self.write_counts[i])
-                #     ),
-                # ] for i in range(self.n_masters),
+                # calcul du delta pour le maître actif
+                If(self.read_counts[self.arbiter.grant]
+                   > self.last_reads[self.arbiter.grant],
+                   self.delta_reads[self.arbiter.grant]
+                       .eq(self.read_counts[self.arbiter.grant]
+                           - self.last_reads[self.arbiter.grant])
+                ).Else(
+                   self.delta_reads[self.arbiter.grant]
+                       .eq(self.last_reads[self.arbiter.grant]
+                           - self.read_counts[self.arbiter.grant])
+                ),
 
+                If(self.write_counts[self.arbiter.grant]
+                   > self.last_writes[self.arbiter.grant],
+                   self.delta_writes[self.arbiter.grant]
+                       .eq(self.write_counts[self.arbiter.grant]
+                           - self.last_writes[self.arbiter.grant])
+                ).Else(
+                   self.delta_writes[self.arbiter.grant]
+                       .eq(self.last_writes[self.arbiter.grant]
+                           - self.write_counts[self.arbiter.grant])
+                ),
+
+                # signal de fin d'échantillon
                 self.sample_done.eq(1),
 
-                # If(self.learn,
-                #    # apprentissage : ajustement des seuils
-                #    *[
-                #        If((self.delta_reads[i] + margin) > self.read_thresholds[i],
-                #           self.read_thresholds[i].eq(self.delta_reads[i] + margin)
-                #        ),
-                #        If((self.delta_writes[i] + margin) > self.write_thresholds[i],
-                #           self.write_thresholds[i].eq(self.delta_writes[i] + margin)
-                #        ),
-                #    ] for i in range(self.n_masters),
-                # ).Else(
-                #    # en mode monitoring : on teste le maître actif seulement
-                #    If(self.delta_reads[self.arbiter.grant] > self.read_thresholds[self.arbiter.grant],
-                #       self.alert_pulse.eq(1), self.alert.eq(1)
-                #    ).Elif(self.delta_writes[self.arbiter.grant] > self.write_thresholds[self.arbiter.grant],
-                #       self.alert_pulse.eq(1), self.alert.eq(1)
-                #    ).Else(
-                #       self.alert.eq(0)
-                #    )
-                # ),
+                If(self.learn,
+                    # mise à jour du seuil lecture si delta + marge > ancien seuil
+                    If((self.delta_reads[self.arbiter.grant] + margin)
+                       > self.read_thresholds[self.arbiter.grant],
+                       self.read_thresholds[self.arbiter.grant]
+                           .eq(self.delta_reads[self.arbiter.grant] + margin)
+                    ),
+                    # idem pour l'écriture
+                    If((self.delta_writes[self.arbiter.grant] + margin)
+                       > self.write_thresholds[self.arbiter.grant],
+                       self.write_thresholds[self.arbiter.grant]
+                           .eq(self.delta_writes[self.arbiter.grant] + margin)
+                    ),
+                ).Else(
+                    # déclenchement d'alerte si dépassement du seuil propre au maître
+                    If(self.delta_reads[self.arbiter.grant]
+                       > self.read_thresholds[self.arbiter.grant],
+                       self.alert.eq(1), self.alert_pulse.eq(1)
+                    ).Elif(self.delta_writes[self.arbiter.grant]
+                       > self.write_thresholds[self.arbiter.grant],
+                       self.alert.eq(1), self.alert_pulse.eq(1)
+                    ).Else(
+                       self.alert.eq(0)
+                    )
+                ),
 
-                # # snapshots et remise à zéro des compteurs
-            #     *[
-            #         stmt
-            # for i in range(self.n_masters)
-            # for stmt in (
-            #         NextValue(self.last_reads[i], self.read_counts[i]),
-            #         NextValue(self.last_writes[i], self.write_counts[i]),
-            #         NextValue(self.read_counts[i], 0),
-            #         NextValue(self.write_counts[i], 0),)
-            #     ],# for i in range(self.n_masters),
-                *stmts,
+                # FIXME: oiezjfoiezjfeozijfz
+                # on mémorise les compteurs avant remise à zéro
+                # NextValue(self.last_reads[self.arbiter.grant],
+                #           self.read_counts[self.arbiter.grant]),
+                # self.last_reads[self.arbiter.grant].eq(self.read_counts[self.arbiter.grant]),
+                # NextValue(self.last_writes[self.arbiter.grant],
+                #           self.write_counts[self.arbiter.grant]),
+                # self.last_writes[self.arbiter.grant].eq(self.write_counts[self.arbiter.grant]),
 
-                # reset du timer
+                # remise à zéro de **tous** les compteurs pour repartir à neuf
+                # *[self.read_counts[i].eq(0) for i in range(n_masters)],
+                # *[self.write_counts[i].eq(0) for i in range(n_masters)],
+
+                # et reset du timer
                 NextValue(self.cycle_cnt, 0),
             ).Else(
-                # par défaut on lève pas d'alerte ni de sample_done
-                NextValue(self.alert_pulse, 0),
-                NextValue(self.sample_done, 0),
-                NextValue(self.alert, 0)
+                # hors échantillon, on baisse les flags
+                # NextValue(self.sample_done, 0),
+                # NextValue(self.alert_pulse, 0),
+                # NextValue(self.alert, 0),
+                self.alert_pulse.eq(0),
+                self.sample_done.eq(0),
+                self.alert.eq(0)
             )
         ]
 
@@ -833,7 +845,7 @@ def main():
 
     if not os.path.exists("build/"):
         os.makedirs("build/")
-    run_simulation(soc, tb(soc), vcd_name="build/busCounters.vcd")
+    run_simulation(soc, tb(soc), vcd_name="build/busMarbCounters.vcd")
 
 if __name__ == "__main__":
     main()
