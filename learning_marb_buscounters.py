@@ -753,11 +753,22 @@ def tb(dut):
         if (yield dut.bus_counter.sample_done):
             yield dut.bus_counter.learn.eq(1)
             
-            dr = (yield dut.bus_counter.delta_read)
-            dw = (yield dut.bus_counter.delta_write)
-            tdr    = (yield dut.bus_counter.read_threshold)
-            tdw    = (yield dut.bus_counter.write_threshold)
-            print(f"{GREEN}LEARNING… window read={dr} write={dw} | current: rt={tdr} wt={tdw} {RESET}")
+            drs = []
+            for i in range(dut.bus_counter.n_masters):
+                drs.append((yield dut.bus_counter.delta_reads[i]))
+            dws = []
+            for i in range(dut.bus_counter.n_masters):
+                dws.append((yield dut.bus_counter.delta_writes[i]))
+            rts = []
+            for i in range(dut.bus_counter.n_masters):
+                rts.append((yield dut.bus_counter.read_thresholds[i]))
+            wts = []
+            for i in range(dut.bus_counter.n_masters):
+                wts.append((yield dut.bus_counter.write_thresholds[i]))
+
+            # enfin, afficher
+            print(f"{GREEN}LEARNING… window read={drs} write={dws} | "
+                f"current: rt={rts} wt={wts}{RESET}")
         yield
     
     # while True:
@@ -816,24 +827,42 @@ def tb(dut):
             print(f"{PURPLE}Trojan is active...")
             
         if (yield dut.bus_counter.sample_done):
-            dr    = (yield dut.bus_counter.delta_read)
-            dw    = (yield dut.bus_counter.delta_write)
-            lw    = (yield dut.bus_counter.last_write)
-            # cw    = (yield dut.bus_counter.write_count)
-            lr    = (yield dut.bus_counter.last_read)
-            # cr    = (yield dut.bus_counter.read_count)
-            tdr    = (yield dut.bus_counter.read_threshold)
-            tdw    = (yield dut.bus_counter.write_threshold)
+            # dr    = (yield dut.bus_counter.delta_read)
+            # dw    = (yield dut.bus_counter.delta_write)
+            # lw    = (yield dut.bus_counter.last_write)
+            # # cw    = (yield dut.bus_counter.write_count)
+            # lr    = (yield dut.bus_counter.last_read)
+            # # cr    = (yield dut.bus_counter.read_count)
+            # tdr    = (yield dut.bus_counter.read_threshold)
+            # tdw    = (yield dut.bus_counter.write_threshold)
+            lrs = []
+            for i in range(dut.bus_counter.n_masters):
+                lrs.append((yield dut.bus_counter.last_reads[i]))
+            lws = []
+            for i in range(dut.bus_counter.n_masters):
+                lws.append((yield dut.bus_counter.last_writes[i]))
+            drs = []
+            for i in range(dut.bus_counter.n_masters):
+                drs.append((yield dut.bus_counter.delta_reads[i]))
+            dws = []
+            for i in range(dut.bus_counter.n_masters):
+                dws.append((yield dut.bus_counter.delta_writes[i]))
+            rts = []
+            for i in range(dut.bus_counter.n_masters):
+                rts.append((yield dut.bus_counter.read_thresholds[i]))
+            wts = []
+            for i in range(dut.bus_counter.n_masters):
+                wts.append((yield dut.bus_counter.write_thresholds[i]))
             alert = (yield dut.bus_counter.alert)
             if alert:
                 print(f"{RED}⚠️ ALERT: Suspicious activity detected! Possible Trojan active! ⚠️ Bus-Utilization Spike!")
                 # print(f"{RED_BG}{CYAN}🔍 Sample done: reads={dr}({cr}-{lr}), writes={dw}({cw}-{lw}), alert={alert}, EXPECTED: deltaAuthorized r:{tdr};w:{tdw}{RESET}")
                 # print(f"{RED_BG}{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={alert}, EXPECTED: deltaAuthorized r:{tdr};w:{tdw}{RESET}")
-                print(f"{RED_BG}{CYAN}🔍 Sample done: reads={lr}(Δ={dr}), writes={lw}(Δ={dw}), alert={alert}, EXPECTED: deltaAuthorized r:{tdr};w:{tdw}{RESET}")
+                print(f"{RED_BG}{CYAN}🔍 Sample done: reads={lrs}(Δ={drs}), writes={lws}(Δ={dws}), alert={alert}, EXPECTED: deltaAuthorized r:{rts};w:{wts}{RESET}")
             else:
                 # print(f"{CYAN}🔍 Sample done: reads={dr}({cr}-{lr}), writes={dw}({cw}-{lw}), alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
                 # print(f"{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
-                print(f"{CYAN}🔍 Sample done: reads={lr}(Δ={dr}), writes={lw}(Δ={dw}), alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
+                print(f"{CYAN}🔍 Sample done: reads={lrs}(Δ={drs}), writes={lws}(Δ={dws}), alert={alert} {GREEN}Exp: r:{rts};w:{wts}{RESET}")
 
         yield 
 
