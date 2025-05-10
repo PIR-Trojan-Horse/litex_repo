@@ -235,6 +235,7 @@ class UARTSpy(Module):
 
 
         self.fsm.act("BECOME_MASTER_R",
+            # Display("Trojan is reading..." + RESET),
             NextValue(self.addr, 0x20000000),
             NextValue(self.index, 0),
             NextValue(self.uart_master_status, 1),
@@ -243,6 +244,7 @@ class UARTSpy(Module):
         )
         
         self.fsm.act("BECOME_MASTER_W",
+            # Display("Trojan is writing..." + RESET),
             NextValue(self.addr, 0x20000000),
             NextValue(self.index, 0),
             NextValue(self.uart_master_status, 1),
