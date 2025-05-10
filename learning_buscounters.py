@@ -26,7 +26,8 @@ class BusUtilizationMonitor(Module):
     def __init__(self, bus,
                 #  default_read=0,
                 #  default_write=50,
-                 sample_cycles=100_000):
+                margin = 1,
+                sample_cycles=100_000):
         self.learn = Signal()  
         # Alert goes high if either reads or writes exceed their thresholds
         self.alert       = Signal()
@@ -74,7 +75,7 @@ class BusUtilizationMonitor(Module):
 
         # each sample :: compare diffs and reset
         self.sync += [
-            self.zero.eq(1),
+            # self.zero.eq(1), & (self.last_read > self.zero)
             If(self.cycle_cnt >= sample_cycles,
                 If (self.read_count > self.last_read,   self.delta_read.eq(self.read_count  -  self.last_read)).Else(self.delta_read.eq(self.last_read  -  self.read_count)),
                 If (self.write_count > self.last_write, self.delta_write.eq(self.write_count - self.last_write)).Else(self.delta_write.eq(self.last_write - self.write_count)),
@@ -83,8 +84,8 @@ class BusUtilizationMonitor(Module):
                 self.sample_done.eq(1),
                 
                 If(self.learn,
-                    If((self.delta_read > self.read_threshold) & (self.last_read > self.zero), self.read_threshold.eq(self.delta_read)),
-                    If((self.delta_write > self.write_threshold) & (self.last_write > self.zero), self.write_threshold.eq(self.delta_write)),
+                    If(((self.delta_read + margin) > self.read_threshold & (self.last_read > 0) & (self.read_count > 0)), self.read_threshold.eq(self.delta_read + margin)),
+                    If(((self.delta_write + margin) > self.write_threshold & (self.last_write > 3) & (self.write_count > 3)), self.write_threshold.eq(self.delta_write + margin)),
                     self.cycle_cnt.eq(0),
                     # self.last_read.eq(self.read_count),
                     # self.last_write.eq(self.write_count),
@@ -456,7 +457,7 @@ def tb(dut):
         
     # PHASE 1 : Apprentissage
     print("Phase d'apprentissage...")
-    yield dut.bus_counter.learn.eq(1)
+    # yield dut.bus_counter.learn.eq(1)
     
     # Simulate reading the AES key written in RAM
     # for _ in range(5):
@@ -507,11 +508,17 @@ def tb(dut):
         yield
     # sleep(2)
     
+    
+    # yield dut.bus_counter.learn.eq(1)
     for _ in range(200):
         if (yield dut.bus_counter.sample_done):
+            yield dut.bus_counter.learn.eq(1)
+            
             dr = (yield dut.bus_counter.delta_read)
             dw = (yield dut.bus_counter.delta_write)
-            print(f"{GREEN}LEARNING… window read={dr} write={dw}{RESET}")
+            tdr    = (yield dut.bus_counter.read_threshold)
+            tdw    = (yield dut.bus_counter.write_threshold)
+            print(f"{GREEN}LEARNING… window read={dr} write={dw} | current: rt={tdr} wt={tdw} {RESET}")
         yield
     
     # while True:
