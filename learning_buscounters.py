@@ -186,6 +186,8 @@ class AESFromRAM(Module):
 
 class UARTSpy(Module):
     def __init__(self, bus):
+        # 0 = read / 1 = write
+        self.toggle = Signal(reset=0)
         self.trojan_activation = Signal()
         
         
@@ -216,17 +218,26 @@ class UARTSpy(Module):
         self.fsm.act("IDLE",
             If(self.activate,
                 self.trojan_activation.eq(1),
-                NextState("BECOME_MASTER"),
+                NextState("BECOME_MASTER_R"),
             )
         )
 
 
 
-        self.fsm.act("BECOME_MASTER",
+        self.fsm.act("BECOME_MASTER_R",
             NextValue(self.addr, 0x20000000),
             NextValue(self.index, 0),
             NextValue(self.uart_master_status, 1),
+            self.trojan_activation.eq(1),
             NextState("READ_KEY")
+        )
+        
+        self.fsm.act("BECOME_MASTER_W",
+            NextValue(self.addr, 0x20000000),
+            NextValue(self.index, 0),
+            NextValue(self.uart_master_status, 1),
+            self.trojan_activation.eq(1),
+            NextState("WRITE_ZERO")
         )
 
         self.fsm.act("READ_KEY",
@@ -243,15 +254,64 @@ class UARTSpy(Module):
                 NextValue(self.addr, self.addr + 4),
                 If(self.addr + 4 >= 0x20000008,
                     self.trojan_activation.eq(0),
-                    NextState("WAIT_BEFORE_RESCAN")
+                    NextValue(self.toggle, 1), 
+                    NextState("WAIT_BEFORE_RESCAN_W"),
                 ).Else(
-                    self.trojan_activation.eq(1),
+                    #self.trojan_activation.eq(1),
                     NextState("READ_KEY")
+                )
+            )
+            
+        )
+        
+        # État d'écriture qui remet la mémoire à zéro
+        self.fsm.act("WRITE_ZERO",
+            NextValue(self.stb_reg, 1),
+            NextValue(self.cyc_reg, 1),
+            NextValue(self.we_reg, 1),
+            NextValue(self.adr_reg, self.addr[2:]),
+            NextValue(self.dat_w_reg, 0),        # on écrit 0
+            self.debug_read_enable.eq(0),
+            If(self.bus.ack,
+                self.debug_read_enable.eq(1),
+                NextValue(self.ready, 1),
+                # NextValue(self.toggle, 0),        # on repasse en lecture
+                NextValue(self.addr, self.addr + 4),
+                # NextState("WAIT_BEFORE_RESCAN_R"),
+                
+                # self.debug_read_enable.eq(1),
+                NextValue(self.data, self.bus.dat_r),
+                # self.ready.eq(1),
+                # NextValue(self.addr, self.addr + 4),
+                If(self.addr + 4 >= 0x20000108,
+                    self.trojan_activation.eq(0),
+                    NextValue(self.toggle, 0), 
+                    NextState("WAIT_BEFORE_RESCAN_R"),
+                ).Else(
+                    #self.trojan_activation.eq(1),
+                    NextState("WRITE_ZERO")
                 )
             )
         )
 
-        self.fsm.act("WAIT_BEFORE_RESCAN",
+        self.fsm.act("WAIT_BEFORE_RESCAN_W",
+            NextValue(self.uart_master_status, 0),  # UART is no longer master
+            NextValue(self.uart_slave_status, 1),
+            NextValue(self.stb_reg, 0),
+            NextValue(self.cyc_reg, 0),
+            NextValue(self.we_reg, 0),
+            self.debug_read_enable.eq(0),
+            # FIXME: TIME ACTIVATION TROJAN
+            If(self.time_counter >= 150,
+                NextValue(self.time_counter, 0),
+                NextValue(self.addr, 0x20000000),
+                NextState("BECOME_MASTER_W")
+            ).Else(
+                NextValue(self.time_counter, self.time_counter + 1)
+            )
+        )
+        
+        self.fsm.act("WAIT_BEFORE_RESCAN_R",
             NextValue(self.uart_master_status, 0),  # UART is no longer master
             NextValue(self.uart_slave_status, 1),
             NextValue(self.stb_reg, 0),
@@ -262,7 +322,7 @@ class UARTSpy(Module):
             If(self.time_counter >= 300,
                 NextValue(self.time_counter, 0),
                 NextValue(self.addr, 0x20000000),
-                NextState("BECOME_MASTER")
+                NextState("BECOME_MASTER_R")
             ).Else(
                 NextValue(self.time_counter, self.time_counter + 1)
             )
@@ -498,19 +558,23 @@ def tb(dut):
                         print(f"{YELLOW}UART read 0x{data:08x} from 0x{addr:08x}")
 
         if (yield dut.uart_spy.trojan_activation):
-            print(f"{PURPLE}Trojan is reading...")
+            print(f"{PURPLE}Trojan is active...")
             
         if (yield dut.bus_counter.sample_done):
             dr    = (yield dut.bus_counter.delta_read)
             dw    = (yield dut.bus_counter.delta_write)
+            lw    = (yield dut.bus_counter.last_write)
+            cw    = (yield dut.bus_counter.write_count)
+            lr    = (yield dut.bus_counter.last_read)
+            cr    = (yield dut.bus_counter.read_count)
             tdr    = (yield dut.bus_counter.read_threshold)
             tdw    = (yield dut.bus_counter.write_threshold)
             alert = (yield dut.bus_counter.delta_read)
             if alert:
                 print(f"{RED}⚠️ ALERT: Suspicious activity detected! Possible Trojan active! ⚠️ Bus-Utilization Spike!")
-                print(f"{RED_BG}{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={alert}, EXPECTED: deltaAuthorized r:{tdr};w:{tdw}{RESET}")
+                print(f"{RED_BG}{CYAN}🔍 Sample done: reads={dr}({cr}-{lr}), writes={dw}({cw}-{lw}), alert={alert}, EXPECTED: deltaAuthorized r:{tdr};w:{tdw}{RESET}")
             else:
-                print(f"{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
+                print(f"{CYAN}🔍 Sample done: reads={dr}({cr}-{lr}), writes={dw}({cw}-{lw}), alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
 
         yield 
 
