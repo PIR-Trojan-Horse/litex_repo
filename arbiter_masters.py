@@ -6,12 +6,46 @@ from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.wishbone import SRAM
 from litex_boards.platforms import digilent_basys3
 from time import time
+from time import sleep
+
 import os
+
+from flask import Flask
+import threading
+
 
 RED = "\033[91m"
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
+
+# Flask app for alert display
+app = Flask(__name__)
+current_alert_status = {"alert": False}
+
+@app.route('/')
+def index():
+    # Récupération du nombre d'alertes et de non alertes
+    alert_count = current_alert_status.get('alert_count', 0)  # Compteur des alertes
+    no_alert_count = current_alert_status.get('no_alert_count', 0)  # Compteur des non-alertes
+
+    # Retourne le HTML qui affiche les cases
+    return f'''
+        <div style="display: flex; justify-content: space-around; align-items: center; height: 100vh;">
+            <!-- Case rouge pour les alertes -->
+            <div style="width: 100px; height: 100px; background-color: red; color: white; display: flex; justify-content: center; align-items: center;">
+                {alert_count}
+            </div>
+            <!-- Case verte pour les non alertes -->
+            <div style="width: 100px; height: 100px; background-color: green; color: white; display: flex; justify-content: center; align-items: center;">
+                {no_alert_count}
+            </div>
+        </div>
+    '''
+
+def start_flask():
+    app.run(host='0.0.0.0', port=5000)
+
 
 # ----------- Monitored Arbiter -----------
 class MonitoredArbiter(Module):
@@ -20,6 +54,8 @@ class MonitoredArbiter(Module):
         self.target = target
         self.n_authorized_masters = n_authorized_masters
         self.alert = Signal(reset=0)
+        self.alert_count = Signal(32, reset=0)
+        self.no_alert_count = Signal(32, reset=0)
 
         self.grant = Signal(max=len(masters))
 
@@ -52,9 +88,11 @@ class MonitoredArbiter(Module):
 
         self.sync += [
             If(active_masters > self.n_authorized_masters,
-                self.alert.eq(1)
+                self.alert.eq(1),
+                self.alert_count.eq(self.alert_count + 1),
             ).Else(
-                self.alert.eq(0)
+                self.alert.eq(0),
+                self.no_alert_count.eq(self.no_alert_count + 1),
             )
         ]
 
@@ -315,6 +353,7 @@ class DualMasterSoC(SoCCore):
 # ----------- Simulation Testbench -----------
 def tb(dut):
     start_time = time()
+    last_alert = 0
     def wb_read(bus, addr):
         yield bus.adr.eq(addr >> 2)
         yield bus.we.eq(0)
@@ -354,7 +393,7 @@ def tb(dut):
     random_slave_status = yield dut.random_component.random_slave_status
  
     while True:
-        if time() - start_time > 3:
+        if time() - start_time > 10:
             print("Simulation finished.")
             break
         uart_master_status = yield dut.uart_spy.uart_master_status
@@ -397,6 +436,13 @@ def main():
 
     if not os.path.exists("build/"):
         os.makedirs("build/")
+
+    flask_thread = threading.Thread(target=start_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    
+    sleep(5)
 
     run_simulation(soc, tb(soc), vcd_name="build/arbiter_masters.vcd")
 
