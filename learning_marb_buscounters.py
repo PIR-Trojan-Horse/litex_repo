@@ -163,28 +163,32 @@ class BusUtilizationMonitor(Module):
     
         self.sync += [
             If(self.cycle_cnt >= sample_cycles,
-                #calcul du delta pour le maître actif
-                If(self.read_counts[self.arbiter.grant]
-                   > self.last_reads[self.arbiter.grant],
-                   self.delta_reads[self.arbiter.grant]
-                       .eq(self.read_counts[self.arbiter.grant]
-                           - self.last_reads[self.arbiter.grant])
-                ).Else(
-                   self.delta_reads[self.arbiter.grant]
-                       .eq(self.last_reads[self.arbiter.grant]
-                           - self.read_counts[self.arbiter.grant])
-                ),
-
-                If(self.write_counts[self.arbiter.grant]
-                   > self.last_writes[self.arbiter.grant],
-                   self.delta_writes[self.arbiter.grant]
-                       .eq(self.write_counts[self.arbiter.grant]
-                           - self.last_writes[self.arbiter.grant])
-                ).Else(
-                   self.delta_writes[self.arbiter.grant]
-                       .eq(self.last_writes[self.arbiter.grant]
-                           - self.write_counts[self.arbiter.grant])
-                ),
+                *[
+                    If(self.read_counts[i]
+                    > self.last_reads[i],
+                    self.delta_reads[i]
+                        .eq(self.read_counts[i]
+                            - self.last_reads[i])
+                    ).Else(
+                    self.delta_reads[i]
+                        .eq(self.last_reads[i]
+                            - self.read_counts[i])
+                    )
+                    for i in range(n_masters)
+                ],
+                *[
+                    If(self.write_counts[i]
+                    > self.last_writes[i],
+                    self.delta_writes[i]
+                        .eq(self.write_counts[i]
+                            - self.last_writes[i])
+                    ).Else(
+                    self.delta_writes[i]
+                        .eq(self.last_writes[i]
+                            - self.write_counts[i])
+                    )
+                    for i in range(n_masters)
+                ],
 
                 # signal de fin d'échantillon
                 self.sample_done.eq(1),
@@ -202,15 +206,18 @@ class BusUtilizationMonitor(Module):
                     ],
                 ).Else(
                     # déclenchement d'alerte si dépassement du seuil propre au maître
-                    If(self.delta_reads[self.arbiter.grant]
-                       > self.read_thresholds[self.arbiter.grant],
-                       self.alert.eq(1), self.alert_pulse.eq(1)
-                    ).Elif(self.delta_writes[self.arbiter.grant]
-                       > self.write_thresholds[self.arbiter.grant],
-                       self.alert.eq(1), self.alert_pulse.eq(1)
-                    ).Else(
-                       self.alert.eq(0)
-                    )
+                    *[
+                        If(self.delta_reads[i]
+                        > self.read_thresholds[i],
+                        self.alert.eq(1), self.alert_pulse.eq(1)
+                        ).Elif(self.delta_writes[i]
+                        > self.write_thresholds[i],
+                        self.alert.eq(1), self.alert_pulse.eq(1)
+                        ).Else(
+                        self.alert.eq(0)
+                        )
+                        for i in range(n_masters)
+                    ],
                 ),
 
                 self.last_reads[self.arbiter.grant].eq(self.read_counts[self.arbiter.grant]),
