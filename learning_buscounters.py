@@ -52,6 +52,8 @@ class BusUtilizationMonitor(Module):
         # latched deltas
         self.delta_read  = Signal(32)
         self.delta_write = Signal(32)
+        
+        self.zero = Signal()
 
         # each clock, update counters
         self.sync += [
@@ -72,17 +74,20 @@ class BusUtilizationMonitor(Module):
 
         # each sample :: compare diffs and reset
         self.sync += [
+            self.zero.eq(1),
             If(self.cycle_cnt >= sample_cycles,
-                self.delta_read.eq(self.read_count  - self.last_read),
-                self.delta_write.eq(self.write_count - self.last_write),
+                If (self.read_count > self.last_read,   self.delta_read.eq(self.read_count  -  self.last_read)).Else(self.delta_read.eq(self.last_read  -  self.read_count)),
+                If (self.write_count > self.last_write, self.delta_write.eq(self.write_count - self.last_write)).Else(self.delta_write.eq(self.last_write - self.write_count)),
+                # self.delta_read.eq(self.read_count  - self.last_read),
+                # self.delta_write.eq(self.write_count - self.last_write),
                 self.sample_done.eq(1),
                 
                 If(self.learn,
-                    If(self.delta_read > self.read_threshold, self.read_threshold.eq(self.delta_read)),
-                    If(self.delta_write > self.write_threshold, self.write_threshold.eq(self.delta_write)),
+                    If((self.delta_read > self.read_threshold) & (self.last_read > self.zero), self.read_threshold.eq(self.delta_read)),
+                    If((self.delta_write > self.write_threshold) & (self.last_write > self.zero), self.write_threshold.eq(self.delta_write)),
                     self.cycle_cnt.eq(0),
-                    self.last_read.eq(self.read_count),
-                    self.last_write.eq(self.write_count),
+                    # self.last_read.eq(self.read_count),
+                    # self.last_write.eq(self.write_count),
                 ).Else(# update deltas
                     # self.delta_read.eq(self.read_count  - self.last_read),
                     # self.delta_write.eq(self.write_count - self.last_write),
@@ -99,13 +104,17 @@ class BusUtilizationMonitor(Module):
                     ),
                     # self.sample_done.eq(1),
 
-                    # snapshot current counts
-                    self.last_read.eq(self.read_count),
-                    self.last_write.eq(self.write_count),
 
-                    # reset timer for next sample
-                    self.cycle_cnt.eq(0),
-                )
+                ),
+                
+                # snapshot current counts
+                self.last_read.eq(self.read_count),
+                self.last_write.eq(self.write_count),
+                self.read_count.eq(0),
+                self.write_count.eq(0),
+                
+                # reset timer for next sample
+                self.cycle_cnt.eq(0)
             ).Else(
                 # reset all flags
                 self.alert_pulse.eq(0),
@@ -564,17 +573,21 @@ def tb(dut):
             dr    = (yield dut.bus_counter.delta_read)
             dw    = (yield dut.bus_counter.delta_write)
             lw    = (yield dut.bus_counter.last_write)
-            cw    = (yield dut.bus_counter.write_count)
+            # cw    = (yield dut.bus_counter.write_count)
             lr    = (yield dut.bus_counter.last_read)
-            cr    = (yield dut.bus_counter.read_count)
+            # cr    = (yield dut.bus_counter.read_count)
             tdr    = (yield dut.bus_counter.read_threshold)
             tdw    = (yield dut.bus_counter.write_threshold)
-            alert = (yield dut.bus_counter.delta_read)
+            alert = (yield dut.bus_counter.alert)
             if alert:
                 print(f"{RED}⚠️ ALERT: Suspicious activity detected! Possible Trojan active! ⚠️ Bus-Utilization Spike!")
-                print(f"{RED_BG}{CYAN}🔍 Sample done: reads={dr}({cr}-{lr}), writes={dw}({cw}-{lw}), alert={alert}, EXPECTED: deltaAuthorized r:{tdr};w:{tdw}{RESET}")
+                # print(f"{RED_BG}{CYAN}🔍 Sample done: reads={dr}({cr}-{lr}), writes={dw}({cw}-{lw}), alert={alert}, EXPECTED: deltaAuthorized r:{tdr};w:{tdw}{RESET}")
+                # print(f"{RED_BG}{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={alert}, EXPECTED: deltaAuthorized r:{tdr};w:{tdw}{RESET}")
+                print(f"{RED_BG}{CYAN}🔍 Sample done: reads={lr}(Δ={dr}), writes={lw}(Δ={dw}), alert={alert}, EXPECTED: deltaAuthorized r:{tdr};w:{tdw}{RESET}")
             else:
-                print(f"{CYAN}🔍 Sample done: reads={dr}({cr}-{lr}), writes={dw}({cw}-{lw}), alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
+                # print(f"{CYAN}🔍 Sample done: reads={dr}({cr}-{lr}), writes={dw}({cw}-{lw}), alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
+                # print(f"{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
+                print(f"{CYAN}🔍 Sample done: reads={lr}(Δ={dr}), writes={lw}(Δ={dw}), alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
 
         yield 
 
