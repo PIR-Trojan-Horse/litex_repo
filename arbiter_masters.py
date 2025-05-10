@@ -21,7 +21,7 @@ RESET = "\033[0m"
 
 # Flask app for alert display
 app = Flask(__name__)
-current_alert_status = {"alert": False}
+current_alert_status = {"alert": False, "alert_count": 0, "no_alert_count": 0}
 
 @app.route('/')
 def index():
@@ -423,10 +423,16 @@ def tb(dut):
                     if data != 0:
                         print(f"{YELLOW}UART read 0x{data:08x} from 0x{addr:08x}")
 
-        current_alert = yield dut.arbiter.alert
-        if current_alert and not last_alert:
+        current_alert = yield dut.arbiter.alert  # Vérifie l'alerte actuelle
+        if current_alert and not last_alert:  # Si l'alerte est activée
             print(f"{RED}⚠️  ALERT: Suspicious activity detected! Possible trojan active!")
-        last_alert = current_alert
+            current_alert_status['alert_count'] += 1  # Augmente le compteur d'alertes
+            current_alert_status['alert'] = True  # Met à jour l'état de l'alerte
+        elif not current_alert and last_alert:  # Si l'alerte est désactivée
+            current_alert_status['no_alert_count'] += 1  # Augmente le compteur des non-alertes
+            current_alert_status['alert'] = False  # Met à jour l'état de l'alerte
+
+        last_alert = current_alert  # Met à jour l'état de l'alerte
         yield 
 
 # ----------- Main -----------
@@ -445,6 +451,9 @@ def main():
     sleep(5)
 
     run_simulation(soc, tb(soc), vcd_name="build/arbiter_masters.vcd")
+
+    print(f"{GREEN} " + str(current_alert_status['alert_count']) + " alerts set.")
+    print(f"{GREEN} " + str(current_alert_status['no_alert_count']) + " alerts reset.")
 
 if __name__ == "__main__":
     main()
