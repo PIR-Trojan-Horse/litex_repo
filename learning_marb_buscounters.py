@@ -107,59 +107,6 @@ class BusUtilizationMonitor(Module):
                    self.write_counts[self.arbiter.grant] + 1),
             )
         ]
-
-        # each sample :: compare diffs and reset
-        # self.sync += [
-        #     # self.zero.eq(1), & (self.last_read > self.zero)
-        #     If(self.cycle_cnt >= sample_cycles,
-        #         # Display("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
-        #         If (self.read_count > self.last_read,   self.delta_read.eq(self.read_count  -  self.last_read)).Else(self.delta_read.eq(self.last_read  -  self.read_count)),
-        #         If (self.write_count > self.last_write, self.delta_write.eq(self.write_count - self.last_write)).Else(self.delta_write.eq(self.last_write - self.write_count)),
-        #         # self.delta_read.eq(self.read_count  - self.last_read),
-        #         # self.delta_write.eq(self.write_count - self.last_write),
-        #         self.sample_done.eq(1),
-                
-        #         If(self.learn,
-        #             If(((self.delta_read + margin) > self.read_threshold & (self.last_read > 0) & (self.read_count > 0)), self.read_threshold.eq(self.delta_read + margin)),
-        #             If(((self.delta_write + margin) > self.write_threshold & (self.last_write > 3) & (self.write_count > 3)), self.write_threshold.eq(self.delta_write + margin)),
-        #             self.cycle_cnt.eq(0),
-        #             # self.last_read.eq(self.read_count),
-        #             # self.last_write.eq(self.write_count),
-        #         ).Else(# update deltas
-        #             # self.delta_read.eq(self.read_count  - self.last_read),
-        #             # self.delta_write.eq(self.write_count - self.last_write),
-        #             # then tell tb() that sampling is done
-        #             # if more read or write + threshold than last time -> go in alert
-        #             If(self.delta_read > self.read_threshold,
-        #                 self.alert_pulse.eq(1),
-        #                 self.alert.eq(1)
-        #             ).Elif(self.delta_write > self.write_threshold,
-        #                 self.alert_pulse.eq(1),
-        #                 self.alert.eq(1)
-        #             ).Else(
-        #                 self.alert.eq(0)
-        #             ),
-        #             # self.sample_done.eq(1),
-
-
-        #         ),
-                
-        #         # snapshot current counts
-        #         self.last_read.eq(self.read_count),
-        #         self.last_write.eq(self.write_count),
-        #         self.read_count.eq(0),
-        #         self.write_count.eq(0),
-                
-        #         # reset timer for next sample
-        #         self.cycle_cnt.eq(0)
-        #     ).Else(
-        #         # reset all flags
-        #         self.alert_pulse.eq(0),
-        #         self.sample_done.eq(0),
-        #         self.alert.eq(0)
-        #     )
-        # ]
-        
     
         self.sync += [
             If(self.cycle_cnt >= sample_cycles,
@@ -189,8 +136,6 @@ class BusUtilizationMonitor(Module):
                     )
                     for i in range(n_masters)
                 ],
-
-                # signal de fin d'échantillon
                 self.sample_done.eq(1),
 
                 If(self.learn,
@@ -213,9 +158,10 @@ class BusUtilizationMonitor(Module):
                         ).Elif(self.delta_writes[i]
                         > self.write_thresholds[i],
                         self.alert.eq(1), self.alert_pulse.eq(1)
-                        ).Else(
-                        self.alert.eq(0)
                         )
+                        # .Else(
+                        # self.alert.eq(0)
+                        # )
                         for i in range(n_masters)
                     ],
                 ),
