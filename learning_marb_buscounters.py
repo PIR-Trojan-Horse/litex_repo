@@ -190,18 +190,16 @@ class BusUtilizationMonitor(Module):
                 self.sample_done.eq(1),
 
                 If(self.learn,
-                    # mise à jour du seuil lecture si delta + marge > ancien seuil
-                    If((self.delta_reads[self.arbiter.grant] + margin)
-                       > self.read_thresholds[self.arbiter.grant],
-                       self.read_thresholds[self.arbiter.grant]
-                           .eq(self.delta_reads[self.arbiter.grant] + margin)
-                    ),
-                    # idem pour l'écriture
-                    If((self.delta_writes[self.arbiter.grant] + margin)
-                       > self.write_thresholds[self.arbiter.grant],
-                       self.write_thresholds[self.arbiter.grant]
-                           .eq(self.delta_writes[self.arbiter.grant] + margin)
-                    ),
+                    *[
+                        If((self.delta_reads[i] + margin) > self.read_thresholds[i],
+                        self.read_thresholds[i].eq(self.delta_reads[i] + margin))
+                        for i in range(n_masters)
+                    ],
+                    *[
+                        If((self.delta_writes[i] + margin) > self.write_thresholds[i],
+                        self.write_thresholds[i].eq(self.delta_writes[i] + margin))
+                        for i in range(n_masters)
+                    ],
                 ).Else(
                     # déclenchement d'alerte si dépassement du seuil propre au maître
                     If(self.delta_reads[self.arbiter.grant]
@@ -215,27 +213,17 @@ class BusUtilizationMonitor(Module):
                     )
                 ),
 
-                # FIXME: oiezjfoiezjfeozijfz
-                # on mémorise les compteurs avant remise à zéro
-                # NextValue(self.last_reads[self.arbiter.grant],
-                #           self.read_counts[self.arbiter.grant]),
                 self.last_reads[self.arbiter.grant].eq(self.read_counts[self.arbiter.grant]),
-                # NextValue(self.last_writes[self.arbiter.grant],
-                #           self.write_counts[self.arbiter.grant]),
                 self.last_writes[self.arbiter.grant].eq(self.write_counts[self.arbiter.grant]),
 
-                # remise à zéro de **tous** les compteurs pour repartir à neuf
+                # remise à zéro de tous les compteurs
                 *[self.read_counts[i].eq(0) for i in range(n_masters)],
                 *[self.write_counts[i].eq(0) for i in range(n_masters)],
 
                 # et reset du timer
-                # NextValue(self.cycle_cnt, 0),
                 self.cycle_cnt.eq(0)
             ).Else(
                 # hors échantillon, on baisse les flags
-                # NextValue(self.sample_done, 0),
-                # NextValue(self.alert_pulse, 0),
-                # NextValue(self.alert, 0),
                 self.alert_pulse.eq(0),
                 self.sample_done.eq(0),
                 self.alert.eq(0)
