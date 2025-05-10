@@ -163,7 +163,7 @@ class BusUtilizationMonitor(Module):
     
         self.sync += [
             If(self.cycle_cnt >= sample_cycles,
-                # calcul du delta pour le maître actif
+                #calcul du delta pour le maître actif
                 If(self.read_counts[self.arbiter.grant]
                    > self.last_reads[self.arbiter.grant],
                    self.delta_reads[self.arbiter.grant]
@@ -219,17 +219,18 @@ class BusUtilizationMonitor(Module):
                 # on mémorise les compteurs avant remise à zéro
                 # NextValue(self.last_reads[self.arbiter.grant],
                 #           self.read_counts[self.arbiter.grant]),
-                # self.last_reads[self.arbiter.grant].eq(self.read_counts[self.arbiter.grant]),
+                self.last_reads[self.arbiter.grant].eq(self.read_counts[self.arbiter.grant]),
                 # NextValue(self.last_writes[self.arbiter.grant],
                 #           self.write_counts[self.arbiter.grant]),
-                # self.last_writes[self.arbiter.grant].eq(self.write_counts[self.arbiter.grant]),
+                self.last_writes[self.arbiter.grant].eq(self.write_counts[self.arbiter.grant]),
 
                 # remise à zéro de **tous** les compteurs pour repartir à neuf
-                # *[self.read_counts[i].eq(0) for i in range(n_masters)],
-                # *[self.write_counts[i].eq(0) for i in range(n_masters)],
+                *[self.read_counts[i].eq(0) for i in range(n_masters)],
+                *[self.write_counts[i].eq(0) for i in range(n_masters)],
 
                 # et reset du timer
-                NextValue(self.cycle_cnt, 0),
+                # NextValue(self.cycle_cnt, 0),
+                self.cycle_cnt.eq(0)
             ).Else(
                 # hors échantillon, on baisse les flags
                 # NextValue(self.sample_done, 0),
