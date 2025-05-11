@@ -1,0 +1,76 @@
+[*]
+[*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
+[*] Sun May 11 23:22:12 2025
+[*]
+[dumpfile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/busCountersV2.vcd"
+[dumpfile_mtime] "Sun May 11 19:44:46 2025"
+[dumpfile_size] 3244745
+[savefile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/counters.gtkw"
+[timestart] 0
+[size] 1920 1023
+[pos] -962 -2
+*-10.800000 0 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 40
+[signals_width] 182
+[sst_expanded] 0
+[sst_vpaned_height] 310
+@28
+[color] 7
++{Learning} DualMasterSoC.main_learn
+[color] 7
++{Sample_Done} DualMasterSoC.main_sample_done
+@c00022
+[color] 7
++{R/W Δ Threshold} DualMasterSoC.main_read_threshold[31:0]
+@28
+(0)DualMasterSoC.main_read_threshold[31:0]
+(1)DualMasterSoC.main_read_threshold[31:0]
+(2)DualMasterSoC.main_read_threshold[31:0]
+(3)DualMasterSoC.main_read_threshold[31:0]
+(4)DualMasterSoC.main_read_threshold[31:0]
+(5)DualMasterSoC.main_read_threshold[31:0]
+(6)DualMasterSoC.main_read_threshold[31:0]
+(7)DualMasterSoC.main_read_threshold[31:0]
+(8)DualMasterSoC.main_read_threshold[31:0]
+(9)DualMasterSoC.main_read_threshold[31:0]
+(10)DualMasterSoC.main_read_threshold[31:0]
+(11)DualMasterSoC.main_read_threshold[31:0]
+(12)DualMasterSoC.main_read_threshold[31:0]
+(13)DualMasterSoC.main_read_threshold[31:0]
+(14)DualMasterSoC.main_read_threshold[31:0]
+(15)DualMasterSoC.main_read_threshold[31:0]
+(16)DualMasterSoC.main_read_threshold[31:0]
+(17)DualMasterSoC.main_read_threshold[31:0]
+(18)DualMasterSoC.main_read_threshold[31:0]
+(19)DualMasterSoC.main_read_threshold[31:0]
+(20)DualMasterSoC.main_read_threshold[31:0]
+(21)DualMasterSoC.main_read_threshold[31:0]
+(22)DualMasterSoC.main_read_threshold[31:0]
+(23)DualMasterSoC.main_read_threshold[31:0]
+(24)DualMasterSoC.main_read_threshold[31:0]
+(25)DualMasterSoC.main_read_threshold[31:0]
+(26)DualMasterSoC.main_read_threshold[31:0]
+(27)DualMasterSoC.main_read_threshold[31:0]
+(28)DualMasterSoC.main_read_threshold[31:0]
+(29)DualMasterSoC.main_read_threshold[31:0]
+(30)DualMasterSoC.main_read_threshold[31:0]
+(31)DualMasterSoC.main_read_threshold[31:0]
+@1401200
+-group_end
+@28
+[color] 3
++{ALERT!} DualMasterSoC.main_alert
+@8022
++{ReadCount} DualMasterSoC.main_read_count[31:0]
++{WriteCount} DualMasterSoC.main_write_count[31:0]
+@24
++{previous_ReadCount} DualMasterSoC.main_last_read[31:0]
++{previous_WriteCount} DualMasterSoC.main_last_write[31:0]
+@25
+[color] 2
++{Δ Read_Count} DualMasterSoC.main_delta_read[31:0]
+@24
+[color] 2
++{Δ Write_Count} DualMasterSoC.main_delta_write[31:0]
+[pattern_trace] 1
+[pattern_trace] 0
