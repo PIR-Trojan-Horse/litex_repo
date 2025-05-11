@@ -7,7 +7,7 @@
 | Address Access Profiling       | Learn typical address usage patterns. For example: Master A writes only to addresses X, Y, Z. Deviations → suspicious.                                       | Extremely strong. No false positives if well trained.              | Requires a learning phase (in training mode).                        | ✅           |
 | Activity counters | Continuously count activity on the bus with a sample rate (number of write/read and compare to last sample) | Almost lightweight ? IDK but at least it is fun (? I guess ?). Who reads that after all ? | May require a learning phase to define thresholds. A very hidden trojan wouldn't be detected | ✅ |
 | Activity counters with learning phase | Continuously count activity on the bus with a sample rate (number of write/read and compare to last sample) | The learning phase set the thresholds for us | Has a learning phase to define thresholds. A very hidden trojan would still not be detected | ... |
-| Read/Write Behavior Profiling  | Masters typically write a lot (CPU, AES), but trojans tend to read keys a lot. Profiling read/write ratios per master can help.                              | Lightweight additional protection.                                 | May be fooled by trojans that mimic normal write/read patterns.      | ❌           |
+| Read/Write Behavior Profiling  | Masters typically write a lot (CPU, AES), but trojans tend to read keys a lot. Profiling read/write ratios per master can help.                              | Lightweight additional protection.                                 | May be fooled by trojans that mimic normal write/read patterns.      | ... |
 
 Migen tutorial: (to create Modules)
 https://m-labs.hk/docs/migen-tutorial.pdf
