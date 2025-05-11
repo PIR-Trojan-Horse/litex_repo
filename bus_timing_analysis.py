@@ -14,6 +14,9 @@ from time import time
 
 import os
 
+from AESFromRam import AESFromRAM
+from SimpleWishboneRam import SimpleWishboneRAM
+
 RED = "\033[91m"
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
@@ -25,17 +28,18 @@ class TimingAnalysis(Module):
         # self.profiling = Signal(reset=1)
         self.alert = Signal()
         self.reading = Signal()
-        self.read_counter = Signal(max=maximum_legitimate_access+1)
+        self.read_counter = Signal(max=maximum_legitimate_access+1,reset=(maximum_legitimate_access+minimum_legitimate_access)//2)
         assert minimum_legitimate_access < maximum_legitimate_access
         self.minimum_acess = minimum_legitimate_access
         self.maximum_acess = maximum_legitimate_access
         
-        self.comb += self.alert.eq((self.read_counter > maximum_legitimate_access) | ((self.read_counter < minimum_legitimate_access) & ~self.reading))
+        self.comb += self.alert.eq(((self.read_counter > maximum_legitimate_access) & self.reading) | ((self.read_counter < minimum_legitimate_access) & ~self.reading))
 
         self.sync += [
+            # Display("%i %i => %i",self.reading,self.read_counter,self.alert),
             If(self.reading,
                 If(arbiter_bus.stb & arbiter_bus.cyc,
-                    self.read_counter.eq(self.read_counter + 1)
+                   If(self.read_counter <= maximum_legitimate_access,self.read_counter.eq(self.read_counter + 1))
                 ).Else(
                     self.reading.eq(0)
                 )
@@ -46,64 +50,6 @@ class TimingAnalysis(Module):
                 )
             ),
         ]
-
-# ----------- AES Module (écrit dans RAM) -----------
-class AESFromRAM(Module):
-    def __init__(self, bus):
-        self.bus = bus
-        self.ready = Signal(reset=0)
-        self.addr = Signal(32)
-        self.index = Signal(2)
-        self.data = Signal(32)
-        self.debug_write_data = Signal(32)
-        self.debug_write_enable = Signal()
-
-        self.submodules.fsm = FSM(reset_state="IDLE")
-
-        self.fsm.act("IDLE",
-            NextValue(self.index, 0),
-            NextValue(self.addr, 0x20000000),
-            NextState("SETUP")
-        )
-
-        self.fsm.act("SETUP",
-            Case(self.index, {
-                0: NextValue(self.data, 0xdeadbeef),
-                1: NextValue(self.data, 0x12345678),
-                2: NextValue(self.data, 0x90abcdef),
-                3: NextValue(self.data, 0xcafebabe),
-            }),
-            NextState("WRITE")
-        )
-
-        self.fsm.act("WRITE",
-            self.bus.adr.eq(self.addr[2:]),  # this is correct (word address)
-            self.bus.dat_w.eq(self.data),
-            self.bus.we.eq(1),
-            self.bus.stb.eq(1),
-            self.bus.cyc.eq(1),
-            self.debug_write_data.eq(self.data),
-            self.debug_write_enable.eq(0),
-            If(self.bus.ack,
-                self.debug_write_enable.eq(1),
-                NextValue(self.addr, self.addr + 4),
-                NextValue(self.index, self.index + 1),
-                If(self.index == 3,
-                    NextState("DONE")
-                ).Else(
-                    NextState("SETUP")
-                )
-            )
-        )
-
-        self.fsm.act("DONE",
-            self.ready.eq(1),
-            self.bus.cyc.eq(0),
-            self.bus.stb.eq(0),
-            self.bus.we.eq(0),
-        )
-
-
 
 # ----------- UART Spy (lit depuis RAM) -----------
 class UARTSpy(Module):
@@ -184,33 +130,6 @@ class UARTSpy(Module):
             self.bus.we.eq(0),
         )
 
-# ----------- Personal RAM component -----------
-class SimpleWishboneRAM(Module):
-    def __init__(self, size=0x1000, init=None):
-        self.bus = wishbone.Interface()
-
-        mem_depth = size // 4  # nombre de mots 32 bits
-        mem = Memory(32, mem_depth, init=init)  # 32 bits par mot
-
-        # Create a Wishbone port (one port, read-write)
-        port = mem.get_port(write_capable=True)
-        self.specials += mem, port
-
-        # Connect Wishbone to memory port
-        self.comb += [
-            port.adr.eq(self.bus.adr),
-            port.dat_w.eq(self.bus.dat_w),
-            self.bus.dat_r.eq(port.dat_r),
-            port.we.eq(self.bus.we & self.bus.stb & self.bus.cyc),
-            self.bus.ack.eq(self.bus.stb & self.bus.cyc)
-        ]
-        self.sync += [
-            If(self.bus.stb & self.bus.cyc & self.bus.we, 
-                # Printing the values in the simulation
-                #print("Write to address 0x{:08x} with data 0x{:08x}".format((yield self.bus.adr), (yield self.bus.dat_w)))
-            )
-        ]
-
 # ----------- SoC Definition -----------
 class DualMasterSoC(SoCCore):
     def __init__(self, platform, simulate=False):
@@ -219,7 +138,7 @@ class DualMasterSoC(SoCCore):
                          integrated_main_ram_size=0x0000)
 
         # Shared RAM
-        #ram = SRAM(0x1000, init=None), reeal ram, not working
+        #ram = SRAM(0x1000, init=None) # real ram, not working
         self.submodules.ram = SimpleWishboneRAM(size=0x1000)
         
         # 2 masters: AES and UART
@@ -228,7 +147,7 @@ class DualMasterSoC(SoCCore):
 
         self.submodules.aes = AESFromRAM(self.aes_master)
         self.submodules.uart_spy = UARTSpy(self.uart_master)
-        self.submodules.timing_monitor = TimingAnalysis(self.ram.bus,4,10)
+        self.submodules.timing_monitor = TimingAnalysis(self.ram.bus,20,100)
 
         # Wishbone arbiter
         self.submodules.arbiter = Arbiter([self.aes_master, self.uart_master], self.ram.bus)
@@ -307,12 +226,10 @@ def tb(dut):
 
         current_alert = yield dut.timing_monitor.alert
         if current_alert and not last_alert:
-            print(f"{RED}⚠️  ALERT: Suspicious activity detected! Possible trojan active!")
+            current_counter = (yield dut.timing_monitor.read_counter)
+            print(f"{RED}⚠️  ALERT: Suspicious activity detected! Possible trojan active! ({current_counter} read)")
         last_alert = current_alert
         yield 
-
-
-
     
 # ----------- Run Simulation -----------
 def main():
