@@ -1,0 +1,293 @@
+[*]
+[*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
+[*] Sun May 11 20:26:25 2025
+[*]
+[dumpfile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/busMarbCounters.vcd"
+[dumpfile_mtime] "Sun May 11 19:44:46 2025"
+[dumpfile_size] 1844531
+[savefile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/marbCounters.gtkw"
+[timestart] 0
+[size] 1920 1023
+[pos] -962 -2
+*-10.200000 0 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 172
+[signals_width] 238
+[sst_expanded] 0
+[sst_vpaned_height] 310
+@28
+[color] 7
++{Learning} DualMasterSoC.main_busutilizationmonitor_learn
+[color] 7
++{SampleDone} DualMasterSoC.main_busutilizationmonitor_sample_done
+[color] 3
++{ALERT!} DualMasterSoC.main_busutilizationmonitor_alert
+@c08022
++{RandomComponent_ReadCount} DualMasterSoC.main_busutilizationmonitor8[31:0]
+@28
+(0)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(1)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(2)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(3)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(4)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(5)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(6)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(7)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(8)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(9)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(10)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(11)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(12)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(13)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(14)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(15)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(16)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(17)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(18)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(19)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(20)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(21)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(22)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(23)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(24)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(25)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(26)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(27)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(28)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(29)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(30)DualMasterSoC.main_busutilizationmonitor8[31:0]
+(31)DualMasterSoC.main_busutilizationmonitor8[31:0]
+@1401200
+-group_end
+@c08022
++{AES_WriteCount} #{DualMasterSoC.main_busutilizationmonitor9[31:0]} (0)DualMasterSoC.main_busutilizationmonitor9[31:0] (1)DualMasterSoC.main_busutilizationmonitor9[31:0] (2)DualMasterSoC.main_busutilizationmonitor9[31:0] (3)DualMasterSoC.main_busutilizationmonitor9[31:0] (4)DualMasterSoC.main_busutilizationmonitor9[31:0] (5)DualMasterSoC.main_busutilizationmonitor9[31:0] (6)DualMasterSoC.main_busutilizationmonitor9[31:0] (7)DualMasterSoC.main_busutilizationmonitor9[31:0] (8)DualMasterSoC.main_busutilizationmonitor9[31:0] (9)DualMasterSoC.main_busutilizationmonitor9[31:0] (10)DualMasterSoC.main_busutilizationmonitor9[31:0] (11)DualMasterSoC.main_busutilizationmonitor9[31:0] (12)DualMasterSoC.main_busutilizationmonitor9[31:0] (13)DualMasterSoC.main_busutilizationmonitor9[31:0] (14)DualMasterSoC.main_busutilizationmonitor9[31:0] (15)DualMasterSoC.main_busutilizationmonitor9[31:0] (16)DualMasterSoC.main_busutilizationmonitor9[31:0] (17)DualMasterSoC.main_busutilizationmonitor9[31:0] (18)DualMasterSoC.main_busutilizationmonitor9[31:0] (19)DualMasterSoC.main_busutilizationmonitor9[31:0] (20)DualMasterSoC.main_busutilizationmonitor9[31:0] (21)DualMasterSoC.main_busutilizationmonitor9[31:0] (22)DualMasterSoC.main_busutilizationmonitor9[31:0] (23)DualMasterSoC.main_busutilizationmonitor9[31:0] (24)DualMasterSoC.main_busutilizationmonitor9[31:0] (25)DualMasterSoC.main_busutilizationmonitor9[31:0] (26)DualMasterSoC.main_busutilizationmonitor9[31:0] (27)DualMasterSoC.main_busutilizationmonitor9[31:0] (28)DualMasterSoC.main_busutilizationmonitor9[31:0] (29)DualMasterSoC.main_busutilizationmonitor9[31:0] (30)DualMasterSoC.main_busutilizationmonitor9[31:0] (31)DualMasterSoC.main_busutilizationmonitor9[31:0]
+DualMasterSoC.main_busutilizationmonitor9[31:0]
+@28
+(0)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(1)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(2)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(3)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(4)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(5)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(6)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(7)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(8)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(9)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(10)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(11)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(12)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(13)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(14)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(15)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(16)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(17)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(18)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(19)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(20)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(21)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(22)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(23)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(24)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(25)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(26)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(27)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(28)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(29)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(30)DualMasterSoC.main_busutilizationmonitor9[31:0]
+(31)DualMasterSoC.main_busutilizationmonitor9[31:0]
+@1401200
+-group_end
+@1409200
+-group_end
+@c00024
++{ΔwritesMasterAES} DualMasterSoC.main_busutilizationmonitor21[31:0]
+@28
+(0)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(1)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(2)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(3)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(4)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(5)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(6)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(7)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(8)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(9)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(10)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(11)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(12)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(13)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(14)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(15)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(16)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(17)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(18)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(19)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(20)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(21)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(22)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(23)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(24)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(25)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(26)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(27)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(28)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(29)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(30)DualMasterSoC.main_busutilizationmonitor21[31:0]
+(31)DualMasterSoC.main_busutilizationmonitor21[31:0]
+@1401204
+-group_end
+@8024
+[color] 2
++{Trojan_ReadCount} DualMasterSoC.main_busutilizationmonitor7[31:0]
+@24
+[color] 2
++{ΔreadsTrojan} DualMasterSoC.main_busutilizationmonitor19[31:0]
+[color] 2
++{ΔwritesTrojan} DualMasterSoC.main_busutilizationmonitor22[31:0]
+@c08022
+[color] 2
++{Trojan_WriteCount} DualMasterSoC.main_busutilizationmonitor10[31:0]
+@28
+(0)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(1)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(2)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(3)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(4)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(5)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(6)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(7)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(8)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(9)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(10)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(11)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(12)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(13)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(14)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(15)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(16)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(17)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(18)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(19)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(20)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(21)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(22)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(23)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(24)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(25)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(26)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(27)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(28)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(29)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(30)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(31)DualMasterSoC.main_busutilizationmonitor10[31:0]
+@1401200
+-group_end
+@c00025
+[color] 1
++{Trojan_WriteCount} DualMasterSoC.main_busutilizationmonitor10[31:0]
+@29
+(0)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(1)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(2)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(3)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(4)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(5)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(6)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(7)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(8)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(9)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(10)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(11)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(12)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(13)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(14)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(15)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(16)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(17)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(18)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(19)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(20)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(21)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(22)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(23)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(24)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(25)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(26)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(27)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(28)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(29)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(30)DualMasterSoC.main_busutilizationmonitor10[31:0]
+(31)DualMasterSoC.main_busutilizationmonitor10[31:0]
+@1401205
+-group_end
+@c00024
+[color] 1
++{previous_Trojan_WriteCount} DualMasterSoC.main_busutilizationmonitor16[31:0]
+@28
+[color] 1
+(0)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(1)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(2)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(3)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(4)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(5)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(6)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(7)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(8)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(9)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(10)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(11)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(12)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(13)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(14)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(15)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(16)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(17)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(18)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(19)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(20)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(21)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(22)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(23)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(24)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(25)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(26)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(27)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(28)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(29)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(30)DualMasterSoC.main_busutilizationmonitor16[31:0]
+[color] 1
+(31)DualMasterSoC.main_busutilizationmonitor16[31:0]
+@1401200
+-group_end
+[pattern_trace] 1
+[pattern_trace] 0
