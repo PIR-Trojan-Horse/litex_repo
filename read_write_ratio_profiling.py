@@ -11,13 +11,22 @@ from arbiter_masters import AESFromRAM
 from arbiter_masters import SimpleWishboneRAM
 from arbiter_masters import UARTSpy
 
+from time import time
+import os
+
+RED = "\033[91m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+RESET = "\033[0m"
+
 # module to monitor read/write behavior
 class ReadWriteMonitor(Module):
-    def __init__(self, masters):
+    def __init__(self, masters, threshold=10):
         self.masters = masters
         self.read_counts = [Signal(32, reset=0) for _ in masters]
         self.write_counts = [Signal(32, reset=0) for _ in masters]
-        self.read_write_ratios = [Signal(32) for _ in masters]
+        self.alerts = [Signal() for _ in masters]
+        self.threshold = threshold
 
         for i, master in enumerate(masters): # for each masters on the bus
             # keep track of reads and writes
@@ -31,14 +40,12 @@ class ReadWriteMonitor(Module):
                 )
             ]
 
-            # get their corresponding ratios
-            total = Signal(32)
+            # raise alert if the number of 
             self.sync += [
-                total.eq(self.read_counts[i] + self.write_counts[i]),
-                If(total > 0,
-                    self.read_write_ratios[i].eq((self.read_counts[i] * 100) // total)
+                If(self.read_counts[i] - self.write_counts[i] > self.threshold,
+                    self.alerts[i].eq(1)
                 ).Else(
-                    self.read_write_ratios[i].eq(0)
+                    self.alerts[i].eq(0)
                 )
             ]
 
@@ -68,11 +75,61 @@ class DualMasterSoC(SoCCore):
         # map memory regions
         self.bus.add_slave("shared_ram", self.ram.bus, region=SoCRegion(origin=0x20000000, size=0x1000))
         self.bus.add_master("aes", master=self.aes_master)
-        self.bus.add_slave("uart", self.uart_master, region=SoCRegion(origin=0x30000000, size=0x1000))
+        self.bus.add_master("uart", self.uart_master, region=SoCRegion(origin=0x30000000, size=0x1000))
 
 # sim tb
 def tb(dut):
-    yield
+    start_time = time()
+
+    print("Waiting for AES to write key...")
+    while not (yield dut.aes.ready):
+        if (yield dut.aes.debug_write_enable):
+            val = (yield dut.aes.debug_write_data)
+            addr = (yield dut.aes.addr)
+            print(f"AES wrote 0x{val:08x} to 0x{addr:08x}")
+        yield
+
+    # Simulate reading the AES key written in RAM
+    for _ in range(5):
+        yield
+
+    uart_master_status = yield dut.uart_spy.uart_master_status
+    last_uart_master_status = uart_master_status  # Store the initial state
+    uart_slave_status = yield dut.uart_spy.uart_slave_status
+
+    # Monitor UART master/slave transitions
+    uart_master_status = yield dut.uart_spy.uart_master_status
+    last_uart_master_status = uart_master_status
+
+    while True:
+        if time() - start_time > 500:
+            print("Simulation finished.")
+            break
+        uart_master_status = yield dut.uart_spy.uart_master_status
+        uart_slave_status = yield dut.uart_spy.uart_slave_status
+
+        if uart_master_status != last_uart_master_status:
+            if uart_master_status:
+                print(f"{RED}UART has become MASTER!")
+            else:
+                print(f"{GREEN}UART has become SLAVE!")
+            last_uart_master_status = uart_master_status
+
+        # Only when UART is master, scan the RAM
+        if uart_master_status:
+            if (yield dut.uart_spy.ready):
+                if (yield dut.uart_spy.debug_read_enable):
+                    addr = (yield dut.uart_spy.addr)
+                    data = (yield dut.uart_spy.debug_read_data)
+                    if data != 0:
+                        print(f"{YELLOW}UART read 0x{data:08x} from 0x{addr:08x}")
+
+        # Check alerts from the read/write monitor
+        for i, alert in enumerate(dut.rw_monitor.alerts):
+            if (yield alert):
+                print(f"{RED}⚠️  ALERT: Suspicious activity detected from master {i}! Possible trojan active!")
+
+        yield
 
 def main():
     platform = digilent_basys3.Platform()
