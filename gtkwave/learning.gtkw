@@ -1,0 +1,33 @@
+[*]
+[*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
+[*] Tue May 13 20:22:37 2025
+[*]
+[dumpfile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/learning.vcd"
+[dumpfile_mtime] "Tue May 13 20:02:27 2025"
+[dumpfile_size] 1220759
+[savefile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/learning.gtkw"
+[timestart] 3361
+[size] 1920 1023
+[pos] -1282 -2
+*-8.400000 1875 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 40
+[signals_width] 238
+[sst_expanded] 0
+[sst_vpaned_height] 310
+@28
+[color] 7
++{LearningPhase} DualMasterSoC.main_learn
+[color] 3
++{ALERT!} DualMasterSoC.main_alert
+@22
++{AddressAccessedByAES} DualMasterSoC.main_aes_addr[31:0]
+[color] 1
++{AddressAccessedByTrojan} DualMasterSoC.main_uart_master_adr[29:0]
+@80022
+[color] 2
++{AddressAccessedOnBus} DualMasterSoC.main_ram_bus_adr[29:0]
+@8023
+[color] 2
++{AddressAccessedOnBus_value} DualMasterSoC.main_ram_adr[9:0]
+[pattern_trace] 1
+[pattern_trace] 0
