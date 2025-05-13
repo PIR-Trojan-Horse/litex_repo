@@ -38,12 +38,20 @@ class LearningTimingAnalysis(Module):
             ((self.read_counter < self.minimum) & ~self.reading))
         )
 
+        prev = Signal()
+        self.rising = Signal()
+
         self.sync += [
-            # If(~self.learn & self.alert,Display(f"{name} r: %i cnt: %i ([%i,%i]), sca: %i%i%i",self.reading,self.read_counter,self.minimum,self.maximum,arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack)),
+            self.rising.eq(arbiter_bus.ack & ~prev),
+            prev.eq(arbiter_bus.ack)
+        ]
+
+        self.sync += [
+            # If(self.learning | self.alert,Display(f"{name} r: %i cnt: %i ([%i,%i]), sca: %i%i%i",self.reading,self.read_counter,self.minimum,self.maximum,arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack)),
             If(self.reading,
-                If(arbiter_bus.stb & arbiter_bus.cyc & arbiter_bus.ack, # count ack to not "overcount" slow communication
+                If(self.rising, # count ack to not "overcount" slow communication
                    self.read_counter.eq(self.read_counter + 1)
-                ).Elif(self.offtime == 2,
+                ).Elif(self.offtime == 4,
                     # Display(f"[{name}] Stopped reading (cnt = %i)",self.read_counter),
                     self.reading.eq(0),
                     self.offtime.eq(0)
@@ -51,7 +59,7 @@ class LearningTimingAnalysis(Module):
                     self.offtime.eq(self.offtime + 1)
                 )
             ).Else(
-                If(arbiter_bus.stb & arbiter_bus.cyc,
+                If(self.rising,
                     self.read_counter.eq(1),
                     self.reading.eq(1)
                 )
@@ -59,7 +67,7 @@ class LearningTimingAnalysis(Module):
             If(self.learning,
             #    Display("Learning: cnt = %i, thresh = [%i,%i]",self.read_counter,self.minimum,self.maximum),
             #    Display("Bus: %i %i %i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.we),
-               If(self.read_counter < self.minimum,self.minimum.eq(self.read_counter)),
+               If((self.read_counter < self.minimum) & ~self.reading & self.read_counter != 0,self.minimum.eq(self.read_counter)),
                If(self.read_counter > self.maximum,self.maximum.eq(self.read_counter))
             ),
         ]
@@ -158,7 +166,7 @@ class UARTSpy(Module):
                 self.ready.eq(1),
                 NextValue(self.addr, self.addr + 4),
                 If(self.addr + 4 >= 0x20000010, #only read the 128-bit key
-                    # Display(f"{GREEN}Trojan deactivation{RESET}"),
+                    # Display(f"{GREEN}Trojan deactivation{RESET}")
                     NextState("RESET")
                 ).Else(
                     NextState("READ_KEY") ## == do nothing
@@ -218,14 +226,16 @@ def tb(dut):
     start_time = time()
 
     # PHASE 1 : Learning
-    print("Learning phase...")
+    print("Learning phase",end='')
     yield dut.bus_learning_aes.learning.eq(1)
     yield dut.bus_learning_uart.learning.eq(1)
 
     learning_time = 40
 
     for _ in range(learning_time):
+        # print('.',end='')
         yield
+    print()
 
     # AES write keys
     # for i in range(50):
@@ -269,6 +279,7 @@ def tb(dut):
     last_uart_master_status = uart_master_status
     last_alert_1 = 0
     last_alert_2 = 0
+    prev_activation = False
 
     while True:
         if time() - start_time > 25:
@@ -292,16 +303,33 @@ def tb(dut):
                     data = (yield dut.uart_spy.debug_read_data)
                     if data != 0:
                         print(f"{YELLOW}UART read 0x{data:08x} from 0x{addr:08x}")
+        
+        state = (yield dut.uart_spy.fsm.state)
+        state_name = list(dut.uart_spy.fsm.actions.keys())[state]
+        if not prev_activation and state_name == "BECOME_SPY":
+            prev_activation = True
+            print(f"{RED}Trojan activation{RESET}")
+            # print(f"{list(dut.uart_spy.fsm.actions.keys())[state]}: {data:08x}")
+        else:
+            if prev_activation and state_name == "RESET":
+                print(f"{RED}Trojan deactivation{RESET}")
+                prev_activation = False
 
         current_alert_1 = yield dut.bus_learning_aes.alert
         if current_alert_1 and not last_alert_1:
             current_counter = (yield dut.bus_learning_aes.read_counter)
+            min = (yield dut.bus_learning_aes.minimum)
+            max = (yield dut.bus_learning_aes.maximum)
+            print(f"minmax : {min} {max}")
             print(f"{RED}⚠️  ALERT: Suspicious activity detected on AES! Possible trojan active! ({current_counter} read)")
         last_alert_1 = current_alert_1
         
         current_alert_2 = yield dut.bus_learning_uart.alert
         if current_alert_2 and not last_alert_2:
             current_counter = (yield dut.bus_learning_uart.read_counter)
+            min = (yield dut.bus_learning_uart.minimum)
+            max = (yield dut.bus_learning_uart.maximum)
+            print(f"minmax : {min} {max}")
             print(f"{RED}⚠️  ALERT: Suspicious activity detected on UART! Possible trojan active! ({current_counter} read)")
         last_alert_2 = current_alert_2
         yield
