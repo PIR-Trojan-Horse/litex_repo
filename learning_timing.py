@@ -69,6 +69,8 @@ class LearningTimingAnalysis(Module):
                 ).Else(
                     self.offtime.eq(self.offtime + 1)
                 )
+            ).Else(
+                self.offtime.eq(0),
             ),
             If(self.learning,
             #    Display("Learning: cnt = %i, thresh = [%i,%i]",self.read_counter,self.minimum,self.maximum),
@@ -77,39 +79,6 @@ class LearningTimingAnalysis(Module):
                If(self.read_counter > self.maximum,self.maximum.eq(self.read_counter))
             ),
         ]
-
-        # prev = Signal()
-        # self.rising = Signal()
-
-        # self.sync += [
-        #     # self.rising.eq(arbiter_bus.ack & ~prev),
-        #     self.rising.eq((arbiter_bus.stb & arbiter_bus.cyc) | arbiter_bus.ack),
-        #     prev.eq(arbiter_bus.ack),
-        #     Display(f"{name} scar: %i%i%i%i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack,self.rising),
-        #     # If(self.learning | self.alert,Display(f"{name} r: %i cnt: %i ([%i,%i]), sca: %i%i%i",self.reading,self.read_counter,self.minimum,self.maximum,arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack)),
-        #     If(self.reading,
-        #         If(self.rising, # count ack to not "overcount" slow communication
-        #            self.read_counter.eq(self.read_counter + 1)
-        #         ).Elif(self.offtime == 2,
-        #             # Display(f"[{name}] Stopped reading (cnt = %i)",self.read_counter),
-        #             self.reading.eq(0),
-        #             self.offtime.eq(0)
-        #         ).Else(
-        #             self.offtime.eq(self.offtime + 1)
-        #         )
-        #     ).Else(
-        #         If(self.rising,
-        #             self.read_counter.eq(1),
-        #             self.reading.eq(1)
-        #         )
-        #     ),
-        #     If(self.learning,
-        #     #    Display("Learning: cnt = %i, thresh = [%i,%i]",self.read_counter,self.minimum,self.maximum),
-        #     #    Display("Bus: %i %i %i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.we),
-        #        If((self.read_counter < self.minimum) & ~self.reading & self.read_counter != 0,self.minimum.eq(self.read_counter)),
-        #        If(self.read_counter > self.maximum,self.maximum.eq(self.read_counter))
-        #     ),
-        # ]
 
 # ----------- UART Spy (lit depuis RAM) -----------
 class UARTSpy(Module):
@@ -256,7 +225,6 @@ class UART_NOFSM(Module):
         self.bus_stb = Signal()
         self.bus_cyc = Signal()
         self.bus_we = Signal()
-        self.bus_dat_r = Signal(32)
         self.bus_adr = Signal(32)
 
         # State enumeration
@@ -273,12 +241,13 @@ class UART_NOFSM(Module):
             arbiter_bus.stb.eq(self.bus_stb),
             arbiter_bus.cyc.eq(self.bus_cyc),
             arbiter_bus.we.eq(self.bus_we),
-            arbiter_bus.adr.eq(self.bus_adr >> 2)
+            arbiter_bus.adr.eq(self.bus_adr),
+            arbiter_bus.dat_r.eq(self.data),
         ]
 
         self.sync += [
             # Display("sca %i%i%i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack),
-
+            # Display("State: %i",self.state),
             # State logic
             If(self.state == IDLE,
                 self.time_counter.eq(self.time_counter + 1),
@@ -304,6 +273,7 @@ class UART_NOFSM(Module):
                 self.bus_we.eq(1),
                 # Display("waiting for ack..."),
                 If(arbiter_bus.ack,
+                    # Display("Wrote %x at %x",self.data,self.addr),
                     # Display(f"{RED}GOT ACK !{RESET_STATE}"),
                     #arbiter_bus.ack.eq(0),  # not necessary; slave clears ack
                     self.ready.eq(1),
@@ -316,10 +286,12 @@ class UART_NOFSM(Module):
                 self.bus_we.eq(0),
                 If(arbiter_bus.ack,
                     # arbiter_bus.ack.eq(0),
-                    If(self.bus_dat_r == 0x00ACCE55,
-                        self.addr.eq(self.addr + 4)
-                    ),
-                    If(self.addr + 4 >= 0x20000080,
+                    # If(arbiter_bus.dat_r == 0x00ACCE55,
+                        self.addr.eq(self.addr + 4),
+                    # ).Else(
+                        # Display("Incorrect, got %x at %x",arbiter_bus.dat_r,self.addr),
+                    # ),
+                    If(self.addr + 4 >= 0x2000100a,
                         self.state.eq(RESET_STATE)
                     ).Else(
                         self.state.eq(UART_ROUTINE_WRITE)
@@ -337,7 +309,7 @@ class UART_NOFSM(Module):
                 self.debug_read_data.eq(self.data),
                 If(arbiter_bus.ack,
                     self.debug_read_enable.eq(1),
-                    self.data.eq(self.bus_dat_r),
+                    self.data.eq(arbiter_bus.dat_r),
                     self.ready.eq(1),
                     self.addr.eq(self.addr + 4),
                     If(self.addr + 4 >= 0x20000010,
@@ -478,8 +450,8 @@ def tb(dut):
         #     last_uart_master_status = uart_master_status
 
         # Only when UART is master, scan the RAM
-        if uart_master_status:
-            if (yield dut.uart_spy.ready):
+        if True or uart_master_status:
+            if True or (yield dut.uart_spy.ready):
                 if (yield dut.uart_spy.debug_read_enable):
                     addr = (yield dut.uart_spy.addr)
                     data = (yield dut.uart_spy.debug_read_data)
