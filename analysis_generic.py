@@ -18,11 +18,12 @@ from litex.soc.interconnect.csr import CSRStorage, CSRStatus, AutoCSR
 
 import os
 
-RED = "\033[91m"
-GREEN = "\033[92m"
-YELLOW = "\033[93m"
-ORANGE = "\033[38;5;208m"
-BLUE = "\033[94m"
+RED = "\033[91m\033[1m"   # Rouge + gras
+GREEN = "\033[92m\033[1m"  # Vert + gras
+YELLOW = "\033[93m\033[1m" # Jaune + gras
+ORANGE = "\033[38;5;208m\033[1m"  # Orange + gras
+BLUE = "\033[94m\033[1m"  # Bleu + gras
+PURPLE = "\033[35m\033[1m"  # Violet + gras
 RESET = "\033[0m"
 
 # ----------- Generic Bus Monitor (detects suspicious activity) -----------
@@ -158,7 +159,7 @@ class UARTSpy(Module):
         # Machine à états
         self.fsm.act("IDLE",
             NextValue(self.time_counter, 0),
-            If(self.time_counter == 10,
+            If(self.time_counter == 20,
                 NextState("BECOME_MASTER")
             ).Else(
                 NextValue(self.time_counter, self.time_counter + 1)
@@ -315,7 +316,7 @@ class TimerNoise(Module):
                     NextValue(self.burst_count, self.burst_count - 1)  # Réduction du compteur
                 ).Else(
                     # Une fois la rafale terminée, pause avant la prochaine rafale
-                    NextValue(self.counter, 100),  # Réinitialisation du timer de pause
+                    NextValue(self.counter, 50),  # Réinitialisation du timer de pause
                     NextState("IDLE")  # Retour à l'état IDLE
                 )
             ).Else(
@@ -537,12 +538,12 @@ def tb(dut):
         if (yield dut.timer_noise.read_enable):
             print(f"{ORANGE}[TIMER] performing action")
         yield 
-    print(f"{YELLOW}\n=== Detection Statistics ===")
+    print(f"{PURPLE}\n=== Detection Statistics ===")
     print(f"True Positives:  {true_positives}")
     print(f"False Positives: {false_positives}")
     print(f"False Negatives: {false_negatives}")
     print(f"True Negatives:  {true_negatives}")
-    precision = true_positives / (true_positives + false_positives + 1e-6)
+    precision = true_positives / (true_positives + false_positives)
     print(f"Precision: {precision:.2f}")
 
 
@@ -555,7 +556,7 @@ def main():
     
     if not os.path.exists("build/"):
         os.makedirs("build/")
-    run_simulation(soc, tb(soc), vcd_name="build/generic_bus.vcd")
+    run_simulation(soc, tb(soc), vcd_name="build/generic_analysis_bus.vcd")
 
 if __name__ == "__main__":
     main()
