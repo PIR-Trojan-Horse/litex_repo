@@ -38,30 +38,31 @@ class LearningTimingAnalysis(Module):
             ((self.read_counter < self.minimum) & ~self.reading))
         )
 
-        prev = Signal()
-        self.rising = Signal()
+        self.transaction = Signal()
+        self.prev_ack = Signal()
+        self.in_burst = Signal()
+
+        self.ack_rise = Signal()
+        self.comb += self.ack_rise.eq(arbiter_bus.ack & ~self.prev_ack & arbiter_bus.stb)
 
         self.sync += [
-            self.rising.eq(arbiter_bus.ack & ~prev),
-            prev.eq(arbiter_bus.ack)
-        ]
-
-        self.sync += [
-            # If(self.learning | self.alert,Display(f"{name} r: %i cnt: %i ([%i,%i]), sca: %i%i%i",self.reading,self.read_counter,self.minimum,self.maximum,arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack)),
-            If(self.reading,
-                If(self.rising, # count ack to not "overcount" slow communication
-                   self.read_counter.eq(self.read_counter + 1)
-                ).Elif(self.offtime == 4,
+            self.prev_ack.eq(arbiter_bus.ack),
+            self.transaction.eq(self.ack_rise),
+            # Display(f"{name} scar: %i%i%i%i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack,self.ack_rise),
+            If(self.ack_rise,
+                If(self.reading,
+                    self.read_counter.eq(self.read_counter + 1)
+                ).Else(
+                    self.read_counter.eq(1),
+                    self.reading.eq(1)
+                )
+            ).Elif(~arbiter_bus.cyc,
+                If(self.offtime == 2,
                     # Display(f"[{name}] Stopped reading (cnt = %i)",self.read_counter),
                     self.reading.eq(0),
                     self.offtime.eq(0)
                 ).Else(
                     self.offtime.eq(self.offtime + 1)
-                )
-            ).Else(
-                If(self.rising,
-                    self.read_counter.eq(1),
-                    self.reading.eq(1)
                 )
             ),
             If(self.learning,
@@ -71,6 +72,39 @@ class LearningTimingAnalysis(Module):
                If(self.read_counter > self.maximum,self.maximum.eq(self.read_counter))
             ),
         ]
+
+        # prev = Signal()
+        # self.rising = Signal()
+
+        # self.sync += [
+        #     # self.rising.eq(arbiter_bus.ack & ~prev),
+        #     self.rising.eq((arbiter_bus.stb & arbiter_bus.cyc) | arbiter_bus.ack),
+        #     prev.eq(arbiter_bus.ack),
+        #     Display(f"{name} scar: %i%i%i%i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack,self.rising),
+        #     # If(self.learning | self.alert,Display(f"{name} r: %i cnt: %i ([%i,%i]), sca: %i%i%i",self.reading,self.read_counter,self.minimum,self.maximum,arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack)),
+        #     If(self.reading,
+        #         If(self.rising, # count ack to not "overcount" slow communication
+        #            self.read_counter.eq(self.read_counter + 1)
+        #         ).Elif(self.offtime == 2,
+        #             # Display(f"[{name}] Stopped reading (cnt = %i)",self.read_counter),
+        #             self.reading.eq(0),
+        #             self.offtime.eq(0)
+        #         ).Else(
+        #             self.offtime.eq(self.offtime + 1)
+        #         )
+        #     ).Else(
+        #         If(self.rising,
+        #             self.read_counter.eq(1),
+        #             self.reading.eq(1)
+        #         )
+        #     ),
+        #     If(self.learning,
+        #     #    Display("Learning: cnt = %i, thresh = [%i,%i]",self.read_counter,self.minimum,self.maximum),
+        #     #    Display("Bus: %i %i %i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.we),
+        #        If((self.read_counter < self.minimum) & ~self.reading & self.read_counter != 0,self.minimum.eq(self.read_counter)),
+        #        If(self.read_counter > self.maximum,self.maximum.eq(self.read_counter))
+        #     ),
+        # ]
 
 # ----------- UART Spy (lit depuis RAM) -----------
 class UARTSpy(Module):
@@ -226,7 +260,7 @@ def tb(dut):
     start_time = time()
 
     # PHASE 1 : Learning
-    print("Learning phase",end='')
+    print("Learning phase")
     yield dut.bus_learning_aes.learning.eq(1)
     yield dut.bus_learning_uart.learning.eq(1)
 
@@ -235,7 +269,12 @@ def tb(dut):
     for _ in range(learning_time):
         # print('.',end='')
         yield
-    print()
+    min1 = (yield dut.bus_learning_uart.minimum)
+    max1 = (yield dut.bus_learning_uart.maximum)
+    min2 = (yield dut.bus_learning_aes.minimum)
+    max2 = (yield dut.bus_learning_aes.maximum)
+            
+    print(f"AES: [{min2},{max2}], UART: [{min1},{max1}]")
 
     # AES write keys
     # for i in range(50):
