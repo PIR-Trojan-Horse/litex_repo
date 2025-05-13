@@ -241,7 +241,7 @@ class UART_NOFSM(Module):
         self.max_lawfullness = max_lawfullness
 
         # Internal state
-        self.state = state = Signal(4, reset=0)
+        self.state = Signal(4, reset=0)
         self.time_counter = Signal(16)
         self.lawfullness = Signal(8)
         self.addr = Signal(32)
@@ -271,25 +271,25 @@ class UART_NOFSM(Module):
             # self.bus.cyc.eq(0),
             # self.bus.we.eq(0),
             # self.debug_read_enable.eq(0),
-
+            # Display("State: %i",state),
             # State logic
-            If(state == IDLE,
+            If(self.state == IDLE,
                 self.time_counter.eq(self.time_counter + 1),
                 If(self.time_counter == self.cooldown,
                     self.time_counter.eq(0),
                     If(self.lawfullness == self.max_lawfullness,
                         self.lawfullness.eq(0),
-                        state.eq(BECOME_SPY)
+                        self.state.eq(BECOME_SPY)
                     ).Else(
                         self.lawfullness.eq(self.lawfullness + 1),
-                        state.eq(BECOME_MASTER)
+                        self.state.eq(BECOME_MASTER)
                     )
                 )
-            ).Elif(state == BECOME_MASTER,
+            ).Elif(self.state == BECOME_MASTER,
                 self.addr.eq(0x20001000),
                 self.uart_master_status.eq(1),
-                state.eq(UART_ROUTINE_WRITE)
-            ).Elif(state == UART_ROUTINE_WRITE,
+                self.state.eq(UART_ROUTINE_WRITE)
+            ).Elif(self.state == UART_ROUTINE_WRITE,
                 self.bus.adr.eq(self.addr >> 2),
                 self.bus.stb.eq(1),
                 self.bus.cyc.eq(1),
@@ -298,9 +298,9 @@ class UART_NOFSM(Module):
                 If(self.bus.ack,
                     #self.bus.ack.eq(0),  # not necessary; slave clears ack
                     self.ready.eq(1),
-                    state.eq(UART_ROUTINE_READ)
+                    self.state.eq(UART_ROUTINE_READ)
                 )
-            ).Elif(state == UART_ROUTINE_READ,
+            ).Elif(self.state == UART_ROUTINE_READ,
                 self.bus.adr.eq(self.addr >> 2),
                 self.bus.stb.eq(1),
                 self.bus.cyc.eq(1),
@@ -311,16 +311,16 @@ class UART_NOFSM(Module):
                         self.addr.eq(self.addr + 4)
                     ),
                     If(self.addr + 4 >= 0x20000080,
-                        state.eq(RESET)
+                        self.state.eq(RESET)
                     ).Else(
-                        state.eq(UART_ROUTINE_WRITE)
+                        self.state.eq(UART_ROUTINE_WRITE)
                     )
                 )
-            ).Elif(state == BECOME_SPY,
+            ).Elif(self.state == BECOME_SPY,
                 self.addr.eq(0x20000000),
                 self.uart_master_status.eq(1),
-                state.eq(READ_KEY)
-            ).Elif(state == READ_KEY,
+                self.state.eq(READ_KEY)
+            ).Elif(self.state == READ_KEY,
                 self.bus.adr.eq(self.addr >> 2),
                 self.bus.stb.eq(1),
                 self.bus.cyc.eq(1),
@@ -332,12 +332,12 @@ class UART_NOFSM(Module):
                     self.ready.eq(1),
                     self.addr.eq(self.addr + 4),
                     If(self.addr + 4 >= 0x20000010,
-                        state.eq(RESET)
+                        self.state.eq(RESET)
                     ).Else(
-                        state.eq(READ_KEY)
+                        self.state.eq(READ_KEY)
                     )
                 )
-            ).Elif(state == RESET,
+            ).Elif(self.state == RESET,
                 self.uart_master_status.eq(0),
                 self.uart_slave_status.eq(1),
                 self.bus.stb.eq(0),
@@ -345,8 +345,8 @@ class UART_NOFSM(Module):
                 self.bus.we.eq(0),
                 self.debug_read_enable.eq(0),
                 self.addr.eq(0x20000000),
-                state.eq(IDLE)
-            ).Elif(state == DONE,
+                self.state.eq(IDLE)
+            ).Elif(self.state == DONE,
                 self.ready.eq(1),
                 self.bus.cyc.eq(0),
                 self.bus.stb.eq(0),
