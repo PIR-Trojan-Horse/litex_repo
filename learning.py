@@ -78,6 +78,7 @@ class AESFromRAM(Module):
             NextState("SETUP")
         )
 
+
         self.fsm.act("SETUP",
             Case(self.index, {
                 0: NextValue(self.data, 0xdeadbeef),
@@ -85,34 +86,55 @@ class AESFromRAM(Module):
                 2: NextValue(self.data, 0x90abcdef),
                 3: NextValue(self.data, 0xcafebabe),
             }),
-            NextState("WRITE")
+            NextState("WRITE#0")
         )
 
-        self.fsm.act("WRITE",
-            self.bus.adr.eq(self.addr[2:]),  # this is correct (word address)
-            self.bus.dat_w.eq(self.data),
-            self.bus.we.eq(1),
-            self.bus.stb.eq(1),
-            self.bus.cyc.eq(1),
-            self.debug_write_data.eq(self.data),
-            self.debug_write_enable.eq(0),
-            If(self.bus.ack,
-                self.debug_write_enable.eq(1),
-                NextValue(self.addr, self.addr + 4),
-                NextValue(self.index, self.index + 1),
-                If(self.index == 3,
-                    NextState("DONE")
-                ).Else(
-                    NextState("SETUP")
+        from random import randint
+        quantity = 20
+        for i in range(quantity):
+            addr = randint(0x20000000 >> 2,0x20000100 >> 2) << 2
+            self.fsm.act("WRITE#"+str(i),
+                self.bus.adr.eq(addr >> 2),
+                self.bus.dat_w.eq(self.data),
+                self.bus.we.eq(1),
+                self.bus.stb.eq(1),
+                self.bus.cyc.eq(1),
+                self.debug_write_data.eq(self.data),
+                self.debug_write_enable.eq(0),
+                If(self.bus.ack,
+                    self.debug_write_enable.eq(1),
+                    NextValue(self.addr, self.addr + 4),
+                    NextValue(self.index, self.index + 1),
+                    NextState(["WRITE#"+str(i+1),"DONE"][i == quantity - 1])
                 )
             )
-        )
+
+        # self.fsm.act("WRITE",
+        #     self.bus.adr.eq(self.addr[2:]),  # this is correct (word address)
+        #     self.bus.dat_w.eq(self.data),
+        #     self.bus.we.eq(1),
+        #     self.bus.stb.eq(1),
+        #     self.bus.cyc.eq(1),
+        #     self.debug_write_data.eq(self.data),
+        #     self.debug_write_enable.eq(0),
+        #     If(self.bus.ack,
+        #         self.debug_write_enable.eq(1),
+        #         NextValue(self.addr, self.addr + 4),
+        #         NextValue(self.index, self.index + 1),
+        #         If(self.index == 3,
+        #             NextState("DONE")
+        #         ).Else(
+        #             NextState("SETUP")
+        #         )
+        #     )
+        # )
 
         self.fsm.act("DONE",
             self.ready.eq(1),
             self.bus.cyc.eq(0),
             self.bus.stb.eq(0),
             self.bus.we.eq(0),
+            NextState("SETUP")
         )
 
 
