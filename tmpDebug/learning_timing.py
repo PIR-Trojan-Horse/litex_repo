@@ -41,17 +41,19 @@ class LearningTimingAnalysis(Module):
         prev = Signal()
         self.rising = Signal()
 
-        self.sync += [
-            self.rising.eq(arbiter_bus.ack & ~prev),
-            prev.eq(arbiter_bus.ack)
-        ]
+        # self.sync += [
+        #     self.rising.eq(arbiter_bus.ack & ~prev),
+        #     prev.eq(arbiter_bus.ack)
+        # ]
 
         self.sync += [
+            self.rising.eq(arbiter_bus.ack & ~prev),
+            prev.eq(arbiter_bus.ack),
             # If(self.learning | self.alert,Display(f"{name} r: %i cnt: %i ([%i,%i]), sca: %i%i%i",self.reading,self.read_counter,self.minimum,self.maximum,arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack)),
             If(self.reading,
                 If(self.rising, # count ack to not "overcount" slow communication
                    self.read_counter.eq(self.read_counter + 1)
-                ).Elif(self.offtime == 4,
+                ).Elif(self.offtime == 1,
                     # Display(f"[{name}] Stopped reading (cnt = %i)",self.read_counter),
                     self.reading.eq(0),
                     self.offtime.eq(0)

@@ -799,7 +799,7 @@ def main():
 
     if not os.path.exists("build/"):
         os.makedirs("build/")
-    run_simulation(soc, tb(soc), vcd_name="build/busMarbCounters.vcd")
+    run_simulation(soc, tb(soc), vcd_name="build/macdo.vcd")
 
 if __name__ == "__main__":
     main()
