@@ -1,0 +1,33 @@
+[*]
+[*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
+[*] Tue May 13 19:26:29 2025
+[*]
+[dumpfile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/learning_addresses.vcd"
+[dumpfile_mtime] "Sun May 11 19:44:46 2025"
+[dumpfile_size] 558477
+[savefile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/DLAMer2.gtkw"
+[timestart] 0
+[size] 1920 1023
+[pos] -1282 -2
+*-9.300000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 273
+[signals_width] 238
+[sst_expanded] 1
+[sst_vpaned_height] 310
+@22
+[color] 7
+DualMasterSoC.main_addr_seen0[15:0]
+DualMasterSoC.main_addr_seen4[15:0]
+@28
+[color] 7
+DualMasterSoC.main_learn
+@22
+DualMasterSoC.main_ram_adr[9:0]
+[color] 2
+DualMasterSoC.main_uart_master_adr[29:0]
+@23
+DualMasterSoC.main_ram_bus_adr[29:0]
+@28
+DualMasterSoC.main_alert
+[pattern_trace] 1
+[pattern_trace] 0
