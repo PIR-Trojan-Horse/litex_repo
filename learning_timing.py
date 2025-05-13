@@ -13,7 +13,7 @@ from time import time
 
 import os
 
-from litex.macdo import AESFromRAM
+from macdo import AESFromRAM
 from SimpleWishboneRam import SimpleWishboneRAM
 
 RED = "\033[91m"
@@ -46,10 +46,14 @@ class LearningTimingAnalysis(Module):
         self.comb += self.ack_rise.eq(arbiter_bus.ack & ~self.prev_ack & arbiter_bus.stb)
 
         self.sync += [
+            # self.alert.eq( ~self.learning & ( ### DO THE SAME THAT COMBINATORY VERSION
+            # ((self.read_counter > self.maximum) & self.reading) | 
+            # ((self.read_counter < self.minimum) & ~self.reading))),
+            
             self.prev_ack.eq(arbiter_bus.ack),
             self.transaction.eq(self.ack_rise),
             # Display(f"{name} scar: %i%i%i%i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack,self.ack_rise),
-            If(self.ack_rise,
+            If(self.ack_rise, self.offtime.eq(0),
                 If(self.reading,
                     self.read_counter.eq(self.read_counter + 1)
                 ).Else(
@@ -57,7 +61,7 @@ class LearningTimingAnalysis(Module):
                     self.reading.eq(1)
                 )
             ).Elif(~arbiter_bus.cyc,
-                If(self.offtime == 2,
+                If(self.offtime == 1,
                     # Display(f"[{name}] Stopped reading (cnt = %i)",self.read_counter),
                     self.reading.eq(0),
                     self.offtime.eq(0)
@@ -68,7 +72,7 @@ class LearningTimingAnalysis(Module):
             If(self.learning,
             #    Display("Learning: cnt = %i, thresh = [%i,%i]",self.read_counter,self.minimum,self.maximum),
             #    Display("Bus: %i %i %i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.we),
-               If((self.read_counter < self.minimum) & ~self.reading & self.read_counter != 0,self.minimum.eq(self.read_counter)),
+               If((self.read_counter < self.minimum) & (~self.reading) & (self.read_counter != 0),self.minimum.eq(self.read_counter)),
                If(self.read_counter > self.maximum,self.maximum.eq(self.read_counter))
             ),
         ]

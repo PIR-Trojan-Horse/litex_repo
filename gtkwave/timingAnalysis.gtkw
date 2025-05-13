@@ -1,17 +1,17 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Tue May 13 20:58:39 2025
+[*] Tue May 13 22:19:53 2025
 [*]
 [dumpfile] "/home/user/Documents/Scolaire/S7/pir/litex/build/learning_timing_analysis.vcd"
-[dumpfile_mtime] "Tue May 13 20:55:09 2025"
-[dumpfile_size] 2298101
+[dumpfile_mtime] "Tue May 13 22:07:37 2025"
+[dumpfile_size] 1242068
 [savefile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/timingAnalysis.gtkw"
 [timestart] 0
 [size] 1920 1023
 [pos] -1282 -2
-*-7.200000 262 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
-[sst_width] 273
-[signals_width] 306
+*-6.900000 447 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 329
+[signals_width] 349
 [sst_expanded] 1
 [sst_vpaned_height] 310
 @28
@@ -34,12 +34,33 @@
 +{ALERT!_UART_bus} DualMasterSoC.main_bus_learning_uart_alert
 @8022
 +{Consecutive_AES_Operations} DualMasterSoC.main_bus_learning_aes_read_counter[15:0]
+@28
+DualMasterSoC.main_aes_master_ack
+DualMasterSoC.main_bus_learning_aes_ack_rise
+DualMasterSoC.main_bus_learning_aes_prev_ack
+@8022
 [color] 2
 +{Consecutive_UART_Operations} DualMasterSoC.main_bus_learning_uart_read_counter[15:0]
 @28
-DualMasterSoC.main_bus_learning_aes_rising
-DualMasterSoC.main_bus_learning_uart_rising
-@29
-DualMasterSoC.main_aes_master_ack
+[color] 2
+DualMasterSoC.main_uart_master_ack
+[color] 2
+DualMasterSoC.main_bus_learning_uart_prev_ack
+[color] 2
+DualMasterSoC.main_bus_learning_uart_ack_rise
+DualMasterSoC.main_aes_master_stb
+DualMasterSoC.main_aes_master_cyc
+[color] 2
+DualMasterSoC.main_uart_master_stb
+[color] 2
+DualMasterSoC.main_uart_master_cyc
+DualMasterSoC.main_bus_learning_aes_reading
+[color] 2
+DualMasterSoC.main_bus_learning_uart_reading
+@22
+DualMasterSoC.main_bus_learning_aes_offtime[7:0]
+@23
+[color] 2
+DualMasterSoC.main_bus_learning_uart_offtime[7:0]
 [pattern_trace] 1
 [pattern_trace] 0
