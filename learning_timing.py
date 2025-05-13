@@ -53,7 +53,8 @@ class LearningTimingAnalysis(Module):
             self.prev_ack.eq(arbiter_bus.ack),
             self.transaction.eq(self.ack_rise),
             # Display(f"{name} scar: %i%i%i%i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack,self.ack_rise),
-            If(self.ack_rise, self.offtime.eq(0),
+            If(self.ack_rise,
+                self.offtime.eq(0),
                 If(self.reading,
                     self.read_counter.eq(self.read_counter + 1)
                 ).Else(
@@ -231,6 +232,128 @@ class UARTSpy(Module):
             self.bus.we.eq(0),
         )
 
+class UART_NOFSM(Module):
+    def __init__(self, bus, cooldown = 10, max_lawfullness = 25):
+        self.bus = bus
+
+        # Inputs / parameters
+        self.cooldown = cooldown
+        self.max_lawfullness = max_lawfullness
+
+        # Internal state
+        self.state = state = Signal(4, reset=0)
+        self.time_counter = Signal(16)
+        self.lawfullness = Signal(8)
+        self.addr = Signal(32)
+        self.data = Signal(32)
+
+        # Outputs / flags
+        self.ready = Signal()
+        self.uart_master_status = Signal()
+        self.uart_slave_status = Signal()
+        self.debug_read_data = Signal(32)
+        self.debug_read_enable = Signal()
+
+        # State enumeration
+        IDLE = 0
+        BECOME_MASTER = 1
+        UART_ROUTINE_WRITE = 2
+        UART_ROUTINE_READ = 3
+        BECOME_SPY = 4
+        READ_KEY = 5
+        RESET = 6
+        DONE = 7
+
+        self.sync += [
+            # Default fall-through values
+            # self.ready.eq(0),
+            # self.bus.stb.eq(0),
+            # self.bus.cyc.eq(0),
+            # self.bus.we.eq(0),
+            # self.debug_read_enable.eq(0),
+
+            # State logic
+            If(state == IDLE,
+                self.time_counter.eq(self.time_counter + 1),
+                If(self.time_counter == self.cooldown,
+                    self.time_counter.eq(0),
+                    If(self.lawfullness == self.max_lawfullness,
+                        self.lawfullness.eq(0),
+                        state.eq(BECOME_SPY)
+                    ).Else(
+                        self.lawfullness.eq(self.lawfullness + 1),
+                        state.eq(BECOME_MASTER)
+                    )
+                )
+            ).Elif(state == BECOME_MASTER,
+                self.addr.eq(0x20001000),
+                self.uart_master_status.eq(1),
+                state.eq(UART_ROUTINE_WRITE)
+            ).Elif(state == UART_ROUTINE_WRITE,
+                self.bus.adr.eq(self.addr >> 2),
+                self.bus.stb.eq(1),
+                self.bus.cyc.eq(1),
+                self.data.eq(0x00ACCE55),
+                self.bus.we.eq(1),
+                If(self.bus.ack,
+                    #self.bus.ack.eq(0),  # not necessary; slave clears ack
+                    self.ready.eq(1),
+                    state.eq(UART_ROUTINE_READ)
+                )
+            ).Elif(state == UART_ROUTINE_READ,
+                self.bus.adr.eq(self.addr >> 2),
+                self.bus.stb.eq(1),
+                self.bus.cyc.eq(1),
+                self.bus.we.eq(0),
+                If(self.bus.ack,
+                    # self.bus.ack.eq(0),
+                    If(self.bus.dat_r == 0x00ACCE55,
+                        self.addr.eq(self.addr + 4)
+                    ),
+                    If(self.addr + 4 >= 0x20000080,
+                        state.eq(RESET)
+                    ).Else(
+                        state.eq(UART_ROUTINE_WRITE)
+                    )
+                )
+            ).Elif(state == BECOME_SPY,
+                self.addr.eq(0x20000000),
+                self.uart_master_status.eq(1),
+                state.eq(READ_KEY)
+            ).Elif(state == READ_KEY,
+                self.bus.adr.eq(self.addr >> 2),
+                self.bus.stb.eq(1),
+                self.bus.cyc.eq(1),
+                self.bus.we.eq(0),
+                self.debug_read_data.eq(self.data),
+                If(self.bus.ack,
+                    self.debug_read_enable.eq(1),
+                    self.data.eq(self.bus.dat_r),
+                    self.ready.eq(1),
+                    self.addr.eq(self.addr + 4),
+                    If(self.addr + 4 >= 0x20000010,
+                        state.eq(RESET)
+                    ).Else(
+                        state.eq(READ_KEY)
+                    )
+                )
+            ).Elif(state == RESET,
+                self.uart_master_status.eq(0),
+                self.uart_slave_status.eq(1),
+                self.bus.stb.eq(0),
+                self.bus.cyc.eq(0),
+                self.bus.we.eq(0),
+                self.debug_read_enable.eq(0),
+                self.addr.eq(0x20000000),
+                state.eq(IDLE)
+            ).Elif(state == DONE,
+                self.ready.eq(1),
+                self.bus.cyc.eq(0),
+                self.bus.stb.eq(0),
+                self.bus.we.eq(0)
+            )
+        ]
+
 # ----------- SoC Definition -----------
 class DualMasterSoC(SoCCore):
     def __init__(self, platform, simulate=False):
@@ -247,7 +370,7 @@ class DualMasterSoC(SoCCore):
         self.uart_master = wishbone.Interface()
 
         self.submodules.aes = AESFromRAM(self.aes_master)
-        self.submodules.uart_spy = UARTSpy(self.uart_master)
+        self.submodules.uart_spy = UART_NOFSM(self.uart_master)
         self.submodules.bus_learning_aes  = LearningTimingAnalysis(self.aes_master,"AES")
         self.submodules.bus_learning_uart = LearningTimingAnalysis(self.uart_master,"UART")
 
@@ -347,8 +470,8 @@ def tb(dut):
                     if data != 0:
                         print(f"{YELLOW}UART read 0x{data:08x} from 0x{addr:08x}")
         
-        state = (yield dut.uart_spy.fsm.state)
-        state_name = list(dut.uart_spy.fsm.actions.keys())[state]
+        state = (yield dut.uart_spy.state) #(yield dut.uart_spy.fsm.state)
+        state_name = ["IDLE","BECOME_MASTER","UART_ROUTINE_WRITE","UART_ROUTINE_READ","BECOME_SPY","READ_KEY","RESET","DONE"][state] #list(dut.uart_spy.fsm.actions.keys())[state]
         if not prev_activation and state_name == "BECOME_SPY":
             prev_activation = True
             print(f"{RED}Trojan activation{RESET}")
