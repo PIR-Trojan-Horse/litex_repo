@@ -8,6 +8,8 @@ from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.wishbone import Arbiter, SRAM
 from litex_boards.platforms import digilent_basys3
 from time import sleep, time
+from analysis_generic import LegitTrafficGenerator, TimerNoise, PRNGComponent
+from litex.soc.cores.timer import Timer
 
 import os
 
@@ -33,12 +35,13 @@ class BusUtilizationMonitor(Module):
         n_masters = len(arbiter.masters)
         self.n_masters = n_masters
         self.arbiter = arbiter
+        self.nb_detections = Signal(32, reset=0)
         # margin = len(arbiter.masters)
         # Alert goes high if either reads or writes exceed their thresholds
         self.alert       = Signal()
         self.alert_pulse = Signal()
         self.sample_done = Signal()
-        
+
         self.read_threshold  = Signal(32)
         self.write_threshold = Signal(32)
         
@@ -137,9 +140,11 @@ class BusUtilizationMonitor(Module):
                     *[
                         If(self.delta_reads[i]
                         > self.read_thresholds[i],
-                        self.alert.eq(1), self.alert_pulse.eq(1)
+                        self.alert.eq(1), self.alert_pulse.eq(1),
+                        self.nb_detections.eq(self.nb_detections + 1),
                         ).Elif(self.delta_writes[i]
                         > self.write_thresholds[i],
+                        self.nb_detections.eq(self.nb_detections + 1),
                         self.alert.eq(1), self.alert_pulse.eq(1)
                         )
                         # .Else(
@@ -215,69 +220,6 @@ class MonitoredArbiter(Module):
             )
         ]
 
-
-# ----------- UART Spy (lit depuis RAM) -----------
-class RandomComponent(Module):
-    def __init__(self, bus):
-        self.bus = bus  # Wishbone master interface
-        self.ready = Signal(reset=0)
-        self.addr = Signal(32)
-        self.index = Signal(10)  # 10 bits to count up to 1024 words
-        self.data = Signal(32)
-        self.debug_read_data = Signal(32)
-        self.debug_read_enable = Signal()
-        self.random_master_status = Signal()  # Status signal for UART becoming master
-        self.random_slave_status = Signal()   # Status signal for UART becoming slave
-
-        self.submodules.fsm = FSM(reset_state="IDLE")
-
-        # Variables de temporisation
-        self.time_counter = Signal(32)
-
-        # Machine à états
-        self.fsm.act("IDLE",
-            NextValue(self.time_counter, 0),
-            If(self.time_counter == 5,
-                NextState("BECOME_MASTER")
-            ).Else(
-                NextValue(self.time_counter, self.time_counter + 1)
-            )
-        )
-
-        self.fsm.act("BECOME_MASTER",
-            NextValue(self.addr, 0x20000000),
-            NextValue(self.index, 0),
-            NextValue(self.random_master_status, 1),
-            NextState("READ_KEY")
-        )
-
-        self.fsm.act("READ_KEY",
-            self.bus.adr.eq(self.addr[2:]),
-            self.bus.stb.eq(1),
-            self.bus.cyc.eq(1),
-            self.bus.we.eq(0),
-            self.debug_read_data.eq(self.data),
-            self.debug_read_enable.eq(0),
-            If(self.bus.ack,
-                self.debug_read_enable.eq(1),
-                self.data.eq(self.bus.dat_r),
-                self.ready.eq(1),
-                NextValue(self.addr, self.addr + 4),
-                If(self.addr + 4 >= 0x20000100,
-                    NextValue(self.addr, 0x20000000),  # Redémarre à 0x20000000
-                    NextState("READ_KEY")              # et continue à lire sans jamais dormir
-                ).Else(
-                    NextState("READ_KEY")
-                )
-            )
-        )
-
-        self.fsm.act("DONE",
-            self.ready.eq(1),
-            self.bus.cyc.eq(0),
-            self.bus.stb.eq(0),
-            self.bus.we.eq(0),
-        )
 
 
 # ----------- AES Module (écrit dans RAM) -----------
@@ -367,6 +309,8 @@ class UARTSpy(Module):
         self.uart_master_status = Signal()  # Status signal for UART becoming master
         self.uart_slave_status = Signal()   # Status signal for UART becoming slave
         self.activate = Signal() 
+        self.active_intent = Signal()
+        self.nb_activation = Signal(32, reset=0)
 
         # Registres internes pour bus
         self.stb_reg = Signal()
@@ -394,7 +338,9 @@ class UARTSpy(Module):
             NextValue(self.addr, 0x20000000),
             NextValue(self.index, 0),
             NextValue(self.uart_master_status, 1),
+            NextValue(self.nb_activation, self.nb_activation+1),
             self.trojan_activation.eq(1),
+            NextValue(self.active_intent, 1),
             NextState("READ_KEY")
         )
         
@@ -402,7 +348,9 @@ class UARTSpy(Module):
             NextValue(self.addr, 0x20000000),
             NextValue(self.index, 0),
             NextValue(self.uart_master_status, 1),
+            NextValue(self.nb_activation, self.nb_activation+1),
             self.trojan_activation.eq(1),
+            NextValue(self.active_intent, 1),
             NextState("WRITE_ZERO")
         )
 
@@ -466,6 +414,7 @@ class UARTSpy(Module):
             NextValue(self.stb_reg, 0),
             NextValue(self.cyc_reg, 0),
             NextValue(self.we_reg, 0),
+            NextValue(self.active_intent, 0),
             self.debug_read_enable.eq(0),
             # FIXME: TIME ACTIVATION TROJAN
             If(self.time_counter >= 150,
@@ -484,6 +433,7 @@ class UARTSpy(Module):
             NextValue(self.cyc_reg, 0),
             NextValue(self.we_reg, 0),
             self.debug_read_enable.eq(0),
+            NextValue(self.active_intent, 0),
             # FIXME: TIME ACTIVATION TROJAN
             If(self.time_counter >= 300,
                 NextValue(self.time_counter, 0),
@@ -554,17 +504,18 @@ class DualMasterSoC(SoCCore):
         # 2 masters: AES and UART
         self.aes_master = wishbone.Interface()
         self.uart_master = wishbone.Interface()
-        self.random_master = wishbone.Interface()
-
+        self.legit_master = wishbone.Interface()
+                
+        self.submodules.prng = PRNGComponent(seed=0x12345678)
         self.submodules.aes = AESFromRAM(self.aes_master)
         self.submodules.uart_spy = UARTSpy(self.uart_master)
         # self.submodules.bus_learning = LearningBusMonitor(self.ram.bus)
-        self.submodules.random_component = RandomComponent(self.random_master)
+        self.submodules.legit_traffic = LegitTrafficGenerator(self.legit_master,prng=self.prng,base_addr=0x20001000,span=0x1000,access_interval=2)
         
         # Wishbone arbiter
         # self.submodules.arbiter = Arbiter([self.aes_master, self.uart_master], self.ram.bus) # Wishbone arbiter
         self.submodules.arbiter = MonitoredArbiter([
-                    self.aes_master, self.uart_master, self.random_master
+                    self.aes_master, self.uart_master, self.legit_master
                 ], self.ram.bus, n_authorized_masters=1)
 
         self.submodules.bus_counter = BusUtilizationMonitor(
@@ -580,11 +531,19 @@ class DualMasterSoC(SoCCore):
         self.bus.add_slave("shared_ram", self.ram.bus,region=SoCRegion(origin=0x20000000, size=0x1000))
         self.bus.add_master("aes", master=self.aes_master)
         self.bus.add_slave("uart", self.uart_master, region=SoCRegion(origin=0x30000000, size=0x1000))  # Example address region for UART
-        self.bus.add_slave("random", self.random_master, region=SoCRegion(origin=0x30010000, size=0x1000))
+
+        self.submodules.timer0 = Timer()
+        self.add_csr("timer0")
+        self.submodules.timer_noise = TimerNoise(self.ram.bus)
 # ----------- Simulation Testbench -----------
 def tb(dut):
     print("Petit Analyseur Sympathique Très Inefficace Sincèrement is starting...")
     start_time = time()
+    true_positives = 0
+    false_positives = 0
+    false_negatives = 0
+    true_negatives = 0
+
     def wb_read(bus, addr):
         yield bus.adr.eq(addr >> 2)
         yield bus.we.eq(0)
@@ -722,7 +681,7 @@ def tb(dut):
     uart_master_status = yield dut.uart_spy.uart_master_status
     last_uart_master_status = uart_master_status
     # last_alert = 0
-    while True:
+    while time() - start_time < 3:
         if time() - start_time > 500:
             print("Simulation finished.")
             break
@@ -787,9 +746,15 @@ def tb(dut):
                 # print(f"{CYAN}🔍 Sample done: reads={dr}({cr}-{lr}), writes={dw}({cw}-{lw}), alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
                 # print(f"{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
                 print(f"{CYAN}🔍 Sample done: reads={lrs}(Δ={drs}), writes={lws}(Δ={dws}), alert={alert} {GREEN}Exp: r:{rts};w:{wts}{RESET}")
-
+            
         yield 
-
+    nb_activation = (yield dut.uart_spy.nb_activation)*2
+    nb_detection = yield dut.bus_counter.nb_detections
+    print(f"{PURPLE}\n=== Detection Statistics ===")
+    print(f"Nb activations:  {nb_activation}")
+    print(f"Nb detections: {nb_detection}")
+    precision = nb_detection / nb_activation 
+    print(f"Precision: {precision:.2f}")
 
 
     
