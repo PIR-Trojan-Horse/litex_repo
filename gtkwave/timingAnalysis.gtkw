@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Tue May 13 22:19:53 2025
+[*] Tue May 13 23:32:29 2025
 [*]
 [dumpfile] "/home/user/Documents/Scolaire/S7/pir/litex/build/learning_timing_analysis.vcd"
-[dumpfile_mtime] "Tue May 13 22:07:37 2025"
-[dumpfile_size] 1242068
+[dumpfile_mtime] "Tue May 13 23:32:27 2025"
+[dumpfile_size] 1762250
 [savefile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/timingAnalysis.gtkw"
 [timestart] 0
 [size] 1920 1023
 [pos] -1282 -2
-*-6.900000 447 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-6.900000 49 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 329
 [signals_width] 349
 [sst_expanded] 1

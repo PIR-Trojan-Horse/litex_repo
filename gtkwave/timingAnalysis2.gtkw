@@ -1,0 +1,41 @@
+[*]
+[*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
+[*] Wed May 14 00:44:09 2025
+[*]
+[dumpfile] "/home/user/Documents/Scolaire/S7/pir/litex/build/learning_timing_analysis.vcd"
+[dumpfile_mtime] "Wed May 14 00:33:37 2025"
+[dumpfile_size] 1691733
+[savefile] "/home/user/Documents/Scolaire/S7/pir/litex/gtkwave/timingAnalysis2.gtkw"
+[timestart] 0
+[size] 1920 1023
+[pos] -962 -2
+*-9.900001 1664 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 40
+[signals_width] 251
+[sst_expanded] 0
+[sst_vpaned_height] 310
+@28
+[color] 7
++{LearningPhase} DualMasterSoC.main_bus_learning_aes_learning
+@24
+[color] 7
++{Min_AES_Duration} DualMasterSoC.main_bus_learning_aes_minimum[15:0]
+@25
+[color] 7
++{Min_UART_Duration} DualMasterSoC.main_bus_learning_uart_minimum[15:0]
+@8024
+[color] 7
++{Max_AES_Duration} DualMasterSoC.main_bus_learning_aes_maximum[15:0]
+[color] 7
++{Max_UART_Duration} DualMasterSoC.main_bus_learning_uart_maximum[15:0]
+@28
+[color] 3
++{ALERT!_AES_bus} DualMasterSoC.main_bus_learning_aes_alert
+[color] 3
++{ALERT!_UART_bus} DualMasterSoC.main_bus_learning_uart_alert
+@8024
++{Consecutive_AES_Operations} DualMasterSoC.main_bus_learning_aes_read_counter[15:0]
+[color] 2
++{Consecutive_UART_Operations} DualMasterSoC.main_bus_learning_uart_read_counter[15:0]
+[pattern_trace] 1
+[pattern_trace] 0
