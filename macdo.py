@@ -15,13 +15,14 @@ import os
 
 # Petit Analyseur Sympathique Très Inefficace Sincèrement
 
-RED = "\033[91m"
-RED_BG = "\033[101m"
-GREEN = "\033[92m"
-YELLOW = "\033[93m"
-CYAN = "\033[36m"
-PURPLE = "\033[35m"
+RED = "\033[91m\033[1m"
+RED_BG = "\033[101m\033[1m"
+GREEN = "\033[92m\033[1m"
+YELLOW = "\033[93m\033[1m"
+CYAN = "\033[36m\033[1m"
+PURPLE = "\033[35m\033[1m"
 RESET = "\033[0m"
+ORANGE = "\033[38;5;208m\033[1m"  # Orange + gras
 
 # ----------- Generic Bus Monitor (detects suspicious activity) -----------
 class BusUtilizationMonitor(Module):
@@ -235,7 +236,7 @@ class AESFromRAM(Module):
         self.data = Signal(32)
         self.debug_write_data = Signal(32)
         self.debug_write_enable = Signal()
-
+        self.time_counter = Signal(32)
         self.submodules.fsm = FSM(reset_state="IDLE")
 
         self.fsm.act("IDLE",
@@ -366,7 +367,7 @@ class UARTSpy(Module):
                 NextValue(self.data, self.bus.dat_r),
                 self.ready.eq(1),
                 NextValue(self.addr, self.addr + 4),
-                If(self.addr + 4 >= 0x20000008,
+                If(self.addr + 4 >= 0x20000028,
                     self.trojan_activation.eq(0),
                     NextValue(self.toggle, 1), 
                     NextState("WAIT_BEFORE_RESCAN_W"),
@@ -397,7 +398,7 @@ class UARTSpy(Module):
                 NextValue(self.data, self.bus.dat_r),
                 # self.ready.eq(1),
                 # NextValue(self.addr, self.addr + 4),
-                If(self.addr + 4 >= 0x20000108,
+                If(self.addr + 4 >= 0x20000028,
                     self.trojan_activation.eq(0),
                     NextValue(self.toggle, 0), 
                     NextState("WAIT_BEFORE_RESCAN_R"),
@@ -522,7 +523,7 @@ class DualMasterSoC(SoCCore):
             bus=self.ram.bus,
             # [self.aes_master, self.uart_master, self.random_master]
             arbiter=self.arbiter,
-            sample_cycles=20,
+            sample_cycles=25,
         )
         self.add_constant("COUNTER_ALERT", self.bus_counter.alert)
 
@@ -573,14 +574,15 @@ def tb(dut):
         yield
 
 
-    # Simulate reading the AES key written in RAM
-    for _ in range(5):
-        yield
         
     # PHASE 1 : Apprentissage
     print("Phase d'apprentissage...")
+    yield dut.bus_counter.learn.eq(1)
     # yield dut.bus_counter.learn.eq(1)
     
+    # Simulate reading the AES key written in RAM
+    for _ in range(50):
+        yield
     # Simulate reading the AES key written in RAM
     # for _ in range(5):
     #     yield
@@ -632,7 +634,7 @@ def tb(dut):
     
     
     # yield dut.bus_counter.learn.eq(1)
-    for _ in range(200):
+    for _ in range(400):
         if (yield dut.bus_counter.sample_done):
             yield dut.bus_counter.learn.eq(1)
             
@@ -652,6 +654,12 @@ def tb(dut):
             # enfin, afficher
             print(f"{GREEN}LEARNING… window read={drs} write={dws} | "
                 f"current: rt={rts} wt={wts}{RESET}")
+            if (yield dut.legit_traffic.write_enable):
+                print(f"{GREEN}[LEGIT] wrote data {(yield dut.legit_traffic.data):08x} at {(yield dut.legit_traffic.addr):08x}")
+
+            if (yield dut.timer_noise.read_enable):
+                print(f"{ORANGE}[TIMER] performing action")
+                
         yield
     
     # while True:
@@ -681,11 +689,8 @@ def tb(dut):
     uart_master_status = yield dut.uart_spy.uart_master_status
     last_uart_master_status = uart_master_status
     # last_alert = 0
-    while time() - start_time < 3:
-        if time() - start_time > 500:
-            print("Simulation finished.")
-            break
-        
+    while time() - start_time < 300:
+
         uart_master_status = yield dut.uart_spy.uart_master_status
         uart_slave_status = yield dut.uart_spy.uart_slave_status
 
@@ -746,15 +751,25 @@ def tb(dut):
                 # print(f"{CYAN}🔍 Sample done: reads={dr}({cr}-{lr}), writes={dw}({cw}-{lw}), alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
                 # print(f"{CYAN}🔍 Sample done: reads={dr}, writes={dw}, alert={alert} {GREEN}Exp: r:{tdr};w:{tdw}{RESET}")
                 print(f"{CYAN}🔍 Sample done: reads={lrs}(Δ={drs}), writes={lws}(Δ={dws}), alert={alert} {GREEN}Exp: r:{rts};w:{wts}{RESET}")
-            
+            if (yield dut.legit_traffic.read_enable):
+                print(f"{GREEN}[LEGIT] read addr {(yield dut.legit_traffic.addr):08x}")
+
+            if (yield dut.legit_traffic.write_enable):
+                print(f"{GREEN}[LEGIT] wrote data {(yield dut.legit_traffic.data):08x} at {(yield dut.legit_traffic.addr):08x}")
+
+            if (yield dut.timer_noise.read_enable):
+                print(f"{ORANGE}[TIMER] performing action")
+
         yield 
     nb_activation = (yield dut.uart_spy.nb_activation)*2
     nb_detection = yield dut.bus_counter.nb_detections
     print(f"{PURPLE}\n=== Detection Statistics ===")
     print(f"Nb activations:  {nb_activation}")
     print(f"Nb detections: {nb_detection}")
-    precision = nb_detection / nb_activation 
+    precision = min(nb_detection, nb_activation) / nb_activation
     print(f"Precision: {precision:.2f}")
+    print(f"Redundant alerts: {nb_detection - nb_activation}")
+
 
 
     

@@ -89,7 +89,6 @@ class AESFromRAM(Module):
         self.data = Signal(32)
         self.debug_write_data = Signal(32)
         self.debug_write_enable = Signal()
-
         self.submodules.fsm = FSM(reset_state="IDLE")
 
         self.fsm.act("IDLE",
@@ -220,7 +219,7 @@ class UARTSpy(Module):
         )
 
 class LegitTrafficGenerator(Module):
-    def __init__(self, bus, prng, base_addr=0x20001000, span=0x1000, access_interval=500):
+    def __init__(self, bus, prng, base_addr=0x20001000, span=0x1000, access_interval=5):
         self.bus = bus
         self.ready = Signal()
         self.read_enable = Signal()
@@ -294,7 +293,7 @@ class TimerNoise(Module):
         # Define the FSM states and transitions
         self.fsm.act("IDLE",
             If(self.counter == 0,
-                NextValue(self.burst_count, 8),  # Initialize to 4 consecutive reads
+                NextValue(self.burst_count, 2),  # Initialize to 4 consecutive reads
                 NextState("READ")
             ).Else(
                 NextValue(self.counter, self.counter - 1)
@@ -316,7 +315,7 @@ class TimerNoise(Module):
                     NextValue(self.burst_count, self.burst_count - 1)  # Réduction du compteur
                 ).Else(
                     # Une fois la rafale terminée, pause avant la prochaine rafale
-                    NextValue(self.counter, 50),  # Réinitialisation du timer de pause
+                    NextValue(self.counter, 1),  # Réinitialisation du timer de pause
                     NextState("IDLE")  # Retour à l'état IDLE
                 )
             ).Else(
