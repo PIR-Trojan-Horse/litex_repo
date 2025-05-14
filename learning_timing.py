@@ -248,6 +248,7 @@ class UART_NOFSM(Module):
         self.sync += [
             # Display("sca %i%i%i",arbiter_bus.stb,arbiter_bus.cyc,arbiter_bus.ack),
             # Display("State: %i",self.state),
+            # Display("WRITE: cyc=%d stb=%d ack=%d state=%d", arbiter_bus.cyc, arbiter_bus.stb, arbiter_bus.ack, self.state),
             # State logic
             If(self.state == IDLE,
                 self.time_counter.eq(self.time_counter + 1),
@@ -277,14 +278,17 @@ class UART_NOFSM(Module):
                     # Display(f"{RED}GOT ACK !{RESET_STATE}"),
                     #arbiter_bus.ack.eq(0),  # not necessary; slave clears ack
                     self.ready.eq(1),
+                    self.bus_stb.eq(0),
                     self.state.eq(UART_ROUTINE_READ)
                 )
+            ).Elif(self.state == (DONE+1),self.bus_stb.eq(0),self.state.eq(UART_ROUTINE_READ),
             ).Elif(self.state == UART_ROUTINE_READ,
                 self.bus_adr.eq(self.addr >> 2),
                 self.bus_stb.eq(1),
                 self.bus_cyc.eq(1),
                 self.bus_we.eq(0),
                 If(arbiter_bus.ack,
+                    self.bus_stb.eq(0),
                     # arbiter_bus.ack.eq(0),
                     # If(arbiter_bus.dat_r == 0x00ACCE55,
                         self.addr.eq(self.addr + 4),
@@ -308,6 +312,7 @@ class UART_NOFSM(Module):
                 self.bus_we.eq(0),
                 self.debug_read_data.eq(self.data),
                 If(arbiter_bus.ack,
+                    self.bus_stb.eq(0),
                     self.debug_read_enable.eq(1),
                     self.data.eq(arbiter_bus.dat_r),
                     self.ready.eq(1),
@@ -459,7 +464,7 @@ def tb(dut):
                         print(f"{YELLOW}UART read 0x{data:08x} from 0x{addr:08x}")
         
         state = (yield dut.uart_spy.state) #(yield dut.uart_spy.fsm.state)
-        state_name = ["IDLE","BECOME_MASTER","UART_ROUTINE_WRITE","UART_ROUTINE_READ","BECOME_SPY","READ_KEY","RESET","DONE"][state] #list(dut.uart_spy.fsm.actions.keys())[state]
+        state_name = ["IDLE","BECOME_MASTER","UART_ROUTINE_WRITE","UART_ROUTINE_READ","BECOME_SPY","READ_KEY","RESET","DONE","PLZ_WAIT"][state] #list(dut.uart_spy.fsm.actions.keys())[state]
         if not prev_activation and state_name == "BECOME_SPY":
             prev_activation = True
             print(f"{RED}Trojan activation{RESET}")
