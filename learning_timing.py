@@ -394,7 +394,7 @@ def tb(dut):
     min2 = (yield dut.bus_learning_aes.minimum)
     max2 = (yield dut.bus_learning_aes.maximum)
             
-    print(f"AES: [{min2},{max2}], UART: [{min1},{max1}]")
+    print(f"Learnt thresholds: \n - AES:  [{min2},{max2}] \n - UART: [{min1},{max1}]")
 
     # AES write keys
     # for i in range(50):
@@ -417,7 +417,7 @@ def tb(dut):
     yield dut.bus_learning_aes.learning.eq(0)
     yield dut.bus_learning_uart.learning.eq(0)
 
-    print("Waiting for AES to write key...")
+    # print("Waiting for AES to write key...")
     while not (yield dut.aes.ready):
         if (yield dut.aes.debug_write_enable):
             val = (yield dut.aes.debug_write_data)
@@ -479,8 +479,8 @@ def tb(dut):
             current_counter = (yield dut.bus_learning_aes.read_counter)
             min = (yield dut.bus_learning_aes.minimum)
             max = (yield dut.bus_learning_aes.maximum)
-            print(f"minmax : {min} {max}")
-            print(f"{RED}⚠️  ALERT: Suspicious activity detected on AES! Possible trojan active! ({current_counter} read)")
+            # print(f"minmax : {min} {max}")
+            print(f"{RED}⚠️  ALERT: Suspicious activity detected on AES! Possible trojan active! ({current_counter} reads)")
         last_alert_1 = current_alert_1
         
         current_alert_2 = yield dut.bus_learning_uart.alert
@@ -488,8 +488,8 @@ def tb(dut):
             current_counter = (yield dut.bus_learning_uart.read_counter)
             min = (yield dut.bus_learning_uart.minimum)
             max = (yield dut.bus_learning_uart.maximum)
-            print(f"minmax : {min} {max}")
-            print(f"{RED}⚠️  ALERT: Suspicious activity detected on UART! Possible trojan active! ({current_counter} read)")
+            # print(f"minmax : {min} {max}")
+            print(f"{RED}⚠️  ALERT: Suspicious activity detected on UART! Possible trojan active! ({current_counter} reads)")
         last_alert_2 = current_alert_2
         yield
     
