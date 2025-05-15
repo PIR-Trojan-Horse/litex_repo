@@ -2,6 +2,7 @@ from migen import *
 from migen.genlib.fsm import FSM, NextState, NextValue
 from migen.sim import run_simulation
 from migen.genlib.resetsync import AsyncResetSynchronizer
+from codecarbon import  EmissionsTracker
 
 from litex.soc.integration.soc_core import SoCCore, SoCRegion
 from litex.soc.interconnect import wishbone
@@ -689,7 +690,8 @@ def tb(dut):
     uart_master_status = yield dut.uart_spy.uart_master_status
     last_uart_master_status = uart_master_status
     # last_alert = 0
-    while time() - start_time < 300:
+    nb_activation = 0
+    while nb_activation < 30:
 
         uart_master_status = yield dut.uart_spy.uart_master_status
         uart_slave_status = yield dut.uart_spy.uart_slave_status
@@ -759,7 +761,7 @@ def tb(dut):
 
             if (yield dut.timer_noise.read_enable):
                 print(f"{ORANGE}[TIMER] performing action")
-
+        nb_activation = (yield dut.uart_spy.nb_activation)*2
         yield 
     nb_activation = (yield dut.uart_spy.nb_activation)*2
     nb_detection = yield dut.bus_counter.nb_detections
@@ -774,12 +776,17 @@ def tb(dut):
 
     
 def main():
+
+    
+    
     platform = digilent_basys3.Platform()
     soc = DualMasterSoC(platform, simulate=True)
 
     if not os.path.exists("build/"):
         os.makedirs("build/")
-    run_simulation(soc, tb(soc), vcd_name="build/macdo.vcd")
+
+    
+    
 
 if __name__ == "__main__":
     main()

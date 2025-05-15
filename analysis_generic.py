@@ -2,6 +2,7 @@ from migen import *
 from migen.genlib.fsm import FSM, NextState
 from migen.sim import run_simulation
 from migen.genlib.resetsync import AsyncResetSynchronizer
+from codecarbon import  EmissionsTracker
 
 from litex.soc.integration.soc_core import SoCCore, SoCRegion
 from litex.soc.interconnect import wishbone
@@ -149,6 +150,7 @@ class UARTSpy(Module):
         self.uart_master_status = Signal()  # Status signal for UART becoming master
         self.uart_slave_status = Signal()   # Status signal for UART becoming slave
         self.active_intent = Signal()
+        self.nb_activation = Signal(32, reset=0)
 
         self.submodules.fsm = FSM(reset_state="IDLE")
 
@@ -170,6 +172,7 @@ class UARTSpy(Module):
             NextValue(self.index, 0),
             NextValue(self.uart_master_status, 1),
             NextValue(self.active_intent, 1),
+            NextValue(self.nb_activation, self.nb_activation+1),
             NextState("READ_KEY")
         )
 
@@ -508,7 +511,7 @@ def tb(dut):
     uart_master_status = yield dut.uart_spy.uart_master_status
     last_uart_master_status = uart_master_status
     nb_activations = 0
-    while time() - start_time < 3:
+    while nb_activations < 30:
         uart_master_status = yield dut.uart_spy.uart_master_status
         uart_slave_status = yield dut.uart_spy.uart_slave_status
 
@@ -536,6 +539,7 @@ def tb(dut):
 
         if (yield dut.timer_noise.read_enable):
             print(f"{ORANGE}[TIMER] performing action")
+        nb_activations = (yield dut.uart_spy.nb_activation)
         yield 
     print(f"{PURPLE}\n=== Detection Statistics ===")
     print(f"True Positives:  {true_positives}")
@@ -544,6 +548,7 @@ def tb(dut):
     print(f"True Negatives:  {true_negatives}")
     precision = true_positives / (true_positives + false_positives)
     print(f"Precision: {precision:.2f}")
+    print(f"Nb activations: {nb_activations}")
 
 
 
@@ -555,7 +560,14 @@ def main():
     
     if not os.path.exists("build/"):
         os.makedirs("build/")
+
+    tracker = EmissionsTracker()
+    tracker.start()
+
     run_simulation(soc, tb(soc), vcd_name="build/generic_analysis_bus.vcd")
+
+    tracker.stop()
+    print(tracker.final_emissions_data)
 
 if __name__ == "__main__":
     main()
