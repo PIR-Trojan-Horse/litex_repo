@@ -9,7 +9,7 @@ class PRNGComponent(Module):
     def __init__(self,seed = None):
         if seed is None or seed == 0:
             from random import randint
-            self.__internal_state = Signal(32,reset=randint(0,(1<<32)-1))
+            self.__internal_state = Signal(32,reset=randint(1,(1<<32)-1))
         else:
             self.__internal_state = Signal(32,reset=seed)
         self.random = Signal(32)
